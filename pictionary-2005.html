@@ -1415,7 +1415,20 @@ function startGame() {
 
   playersRef.once("value").then(snap => {
     const players = snap.val() || {};
-    const ids = Object.keys(players).filter(id => players[id] && players[id].online !== false);
+
+    // Purge ghost/nameless entries before starting
+    const purges = [];
+    Object.entries(players).forEach(([id, p]) => {
+      if (!p || !p.name) purges.push(playersRef.child(id).remove());
+    });
+
+    return Promise.all(purges).then(() => {
+      // Re-fetch after purge
+      return playersRef.once("value");
+    });
+  }).then(snap => {
+    const players = snap.val() || {};
+    const ids = Object.keys(players).filter(id => players[id] && players[id].online !== false && players[id].name);
     if (ids.length < 2) { showToast("Need at least 2 players!"); return; }
     const drawer = ids[Math.floor(Math.random() * ids.length)];
     const choices = getWordChoices(diff, []);
@@ -2165,7 +2178,7 @@ function renderScores(g) {
   playersRef.once("value").then(snap => {
     const players = snap.val() || {};
     const sorted  = Object.entries(players)
-      .filter(([id, p]) => p && p.online !== false)
+      .filter(([id, p]) => p && p.name && p.online !== false)   // ← require name
       .sort(([a], [b]) => (s[b] || 0) - (s[a] || 0));
 
     sorted.forEach(([id, p], i) => {
