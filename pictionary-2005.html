@@ -124,49 +124,132 @@ select option{background:#fff;color:#1a1a1a;}
 /* ══════════════════════════════════════
    WAITING ROOM
 ══════════════════════════════════════ */
-#waiting{background:#1a1a1a;overflow-y:auto;}
-.waiting-inner{padding:20px;max-width:480px;margin:0 auto;}
-.waiting-header{text-align:center;margin-bottom:24px;}
-.waiting-header h2{font-family:'Fredoka One',cursive;font-size:28px;color:#f5f0eb;margin-bottom:6px;}
-.room-code-display{
-  background:#1e3a5f;border:2px solid rgba(192,57,43,0.6);
-  border-radius:14px;padding:20px;text-align:center;margin-bottom:20px;
-  overflow:hidden;
+#waiting{background:#111827;overflow-y:auto;}
+.waiting-inner{padding:24px 20px 40px;max-width:480px;margin:0 auto;}
+
+.waiting-header{text-align:center;margin-bottom:28px;padding-top:8px;}
+.waiting-header h2{
+  font-family:'Fredoka One',cursive;font-size:30px;
+  color:#f5f0eb;margin-bottom:6px;letter-spacing:0.5px;
 }
-.room-code-display .label{font-size:11px;text-transform:uppercase;letter-spacing:3px;color:rgba(245,240,235,0.6);margin-bottom:8px;}
+.waiting-header p{font-size:14px;color:rgba(245,240,235,0.65);font-weight:500;}
+
+/* Room code card */
+.room-code-display{
+  background:linear-gradient(135deg,#1e3a5f,#162d4a);
+  border:2px solid rgba(192,57,43,0.7);
+  border-radius:16px;padding:22px 20px;text-align:center;margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+.room-code-display .label{
+  font-size:10px;text-transform:uppercase;letter-spacing:3px;
+  color:rgba(245,240,235,0.5);margin-bottom:10px;font-weight:700;
+}
 .room-code-display .code{
   font-family:'Fredoka One',cursive;
-  font-size:clamp(22px,8vw,42px);
+  font-size:clamp(24px,8vw,44px);
   color:#f0c040;
-  letter-spacing:clamp(2px,1.5vw,8px);
+  letter-spacing:clamp(3px,1.5vw,10px);
   word-break:break-all;line-height:1.2;
+  text-shadow:0 2px 12px rgba(240,192,64,0.25);
 }
-.room-code-display .hint{font-size:12px;color:rgba(245,240,235,0.5);margin-top:6px;}
+.room-code-display .hint{
+  font-size:12px;color:rgba(245,240,235,0.55);
+  margin-top:8px;margin-bottom:14px;
+}
+.btn-copy{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 22px;border-radius:10px;border:none;
+  background:rgba(245,240,235,0.1);border:1.5px solid rgba(245,240,235,0.2);
+  color:#f5f0eb;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:all 0.15s;
+}
+.btn-copy:hover{background:rgba(245,240,235,0.18);border-color:rgba(245,240,235,0.35);}
+
+/* Settings card */
+.settings-card{
+  background:#1e3a5f;
+  border:1.5px solid rgba(255,255,255,0.12);
+  border-radius:16px;padding:20px 20px 8px;margin-bottom:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.25);
+}
+.settings-card h3{
+  font-size:11px;text-transform:uppercase;letter-spacing:2.5px;
+  color:rgba(245,240,235,0.5);margin-bottom:16px;font-weight:800;
+}
+.setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.setting-row label{font-size:14px;font-weight:700;color:#f5f0eb;}
+.setting-row select{
+  width:140px;background:#162d4a;color:#f5f0eb;
+  border:1.5px solid rgba(255,255,255,0.18);
+  border-radius:8px;padding:8px 10px;
+  font-size:14px;font-weight:600;font-family:'Nunito',sans-serif;
+}
+.setting-row select:focus{border-color:#c0392b;outline:none;}
+
+/* Players card */
+.players-card{
+  background:#1e3a5f;
+  border:1.5px solid rgba(255,255,255,0.12);
+  border-radius:16px;padding:16px 16px 6px;margin-bottom:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.25);
+}
+.players-card-header{
+  font-size:11px;text-transform:uppercase;letter-spacing:2.5px;
+  color:rgba(245,240,235,0.5);margin-bottom:14px;font-weight:800;
+}
 .player-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-  gap:10px;margin-bottom:20px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:10px;margin-bottom:10px;
 }
 .player-chip{
-  background:#1e3a5f;border:1.5px solid rgba(255,255,255,0.1);
+  background:#162d4a;border:1.5px solid rgba(255,255,255,0.08);
   border-radius:12px;padding:12px 10px;text-align:center;
   transition:border-color 0.3s;
 }
-.player-chip.host{border-color:#c0392b;}
+.player-chip.host{border-color:#c0392b;background:rgba(192,57,43,0.08);}
 .player-chip .p-avatar{
-  width:40px;height:40px;border-radius:50%;
+  width:42px;height:42px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:18px;margin:0 auto 8px;font-weight:800;
+  font-size:20px;margin:0 auto 8px;font-weight:800;
 }
-.player-chip .p-name{font-size:12px;font-weight:700;color:#f5f0eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.player-chip .p-host{font-size:10px;color:#c0392b;font-weight:700;margin-top:2px;}
-.settings-card{background:#1e3a5f;border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px;margin-bottom:16px;}
-.settings-card h3{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:rgba(245,240,235,0.6);margin-bottom:16px;font-weight:700;}
-.setting-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.setting-row label{font-size:14px;font-weight:600;color:#f5f0eb;}
-.setting-row select,.setting-row input[type=number]{
-  width:130px;background:#162d4a;color:#f5f0eb;border:1.5px solid rgba(255,255,255,0.15);
+.player-chip .p-name{
+  font-size:12px;font-weight:700;color:#f5f0eb;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.setting-row select:focus,.setting-row input[type=number]:focus{border-color:#c0392b;}
+.player-chip .p-host{font-size:10px;color:#c0392b;font-weight:800;margin-top:3px;}
+
+/* Start + Cancel buttons */
+.waiting-actions{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+.btn-start{
+  width:100%;padding:16px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#1e3a5f,#c0392b);
+  color:#f5f0eb;font-family:'Nunito',sans-serif;
+  font-size:17px;font-weight:800;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 4px 18px rgba(192,57,43,0.3);
+  transition:all 0.2s;min-height:54px;
+  letter-spacing:0.3px;
+}
+.btn-start:hover{box-shadow:0 6px 24px rgba(192,57,43,0.45);transform:translateY(-1px);}
+.btn-cancel{
+  width:100%;padding:13px;border:1.5px solid rgba(245,240,235,0.18);
+  border-radius:14px;background:transparent;
+  color:rgba(245,240,235,0.6);font-family:'Nunito',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:all 0.2s;min-height:48px;
+}
+.btn-cancel:hover{border-color:rgba(245,240,235,0.35);color:#f5f0eb;background:rgba(245,240,235,0.05);}
+.waiting-msg{
+  text-align:center;font-size:14px;
+  color:rgba(245,240,235,0.55);
+  margin-top:6px;font-weight:500;
+  padding:8px;
+}
 
 /* ══════════════════════════════════════
    GAME SCREEN
@@ -861,14 +944,14 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
   <div class="waiting-inner">
     <div class="waiting-header">
       <h2>Waiting Room 🎒</h2>
-      <p style="color:var(--muted);font-size:14px;">Share the room code with your friends!</p>
+      <p>Share the room code with your friends!</p>
     </div>
 
     <div class="room-code-display">
       <div class="label">Room Code</div>
       <div class="code" id="displayRoomCode">——</div>
       <div class="hint">Share this in WhatsApp 👆</div>
-      <button class="btn btn-sm btn-outline" style="margin-top:12px;" onclick="copyRoomCode()">📋 Copy Code</button>
+      <button class="btn-copy" onclick="copyRoomCode()">📋 Copy Code</button>
     </div>
 
     <div class="settings-card" id="hostSettings">
@@ -902,13 +985,16 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
       </div>
     </div>
 
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
-      <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:12px;font-weight:700;">Players (<span id="playerCount">0</span>)</h3>
+    <div class="players-card">
+      <div class="players-card-header">Players (<span id="playerCount">0</span>)</div>
       <div class="player-grid" id="playerGrid"></div>
     </div>
 
-    <button class="btn btn-gold" id="startBtn" onclick="startGame()" style="display:none;">🎨 Start Game!</button>
-    <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:10px;" id="waitingMsg">Waiting for host to start...</p>
+    <div class="waiting-actions">
+      <button class="btn-start" id="startBtn" onclick="startGame()" style="display:none;">🎨 Start Game!</button>
+      <p class="waiting-msg" id="waitingMsg">Waiting for host to start...</p>
+      <button class="btn-cancel" onclick="cancelWaiting()">✕ Cancel &amp; Go Back</button>
+    </div>
   </div>
 </div>
 
@@ -2637,6 +2723,31 @@ function switchTab(tab) {
 
 function copyRoomCode() {
   navigator.clipboard?.writeText(roomCode).then(() => showToast("Room code copied! 📋"));
+}
+
+function cancelWaiting() {
+  // Mark self as offline and clean up — same flow as confirmLeave but from waiting room
+  if (playersRef && myId) {
+    playersRef.child(myId).update({ online: false });
+  }
+  // Detach all listeners
+  if (playersRef) {
+    if (playersValueListener)   { playersRef.off("value",         playersValueListener);   playersValueListener   = null; }
+    if (playersAddedListener)   { playersRef.off("child_added",   playersAddedListener);   playersAddedListener   = null; }
+    if (playersChangedListener) { playersRef.off("child_changed", playersChangedListener); playersChangedListener = null; }
+  }
+  if (gameRef && gameListener)  { gameRef.off("value", gameListener); gameListener = null; }
+  // Reset all state
+  knownPlayerIds.clear();
+  chatJoinedIds.clear();
+  gameScreenEntered = false;
+  currentPhase = "";
+  roundActive  = false;
+  amDrawing    = false;
+  strokes      = [];
+  scores       = {};
+  detectLiveGame();
+  showScreen("lobby");
 }
 
 function backToLobby() {
