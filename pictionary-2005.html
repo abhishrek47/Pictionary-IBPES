@@ -1256,6 +1256,9 @@ function setupRoom() {
     joinedAt: firebase.database.ServerValue.TIMESTAMP
   };
   playersRef.child(myId).set(myData);
+  // Cancel any previously registered onDisconnect before registering new one
+  // This prevents accumulation of duplicate server-side disconnect handlers
+  playersRef.child(myId).onDisconnect().cancel();
   playersRef.child(myId).onDisconnect().update({ online: false });
 
   // Host initialises game node
@@ -1289,6 +1292,11 @@ function setupRoom() {
     });
     renderPlayers(all);
     renderInGamePlayers(all);
+    // If game is active and player count drops to 1, pause
+    if (gameScreenEntered) {
+      const online = Object.values(all).filter(p => p && p.name && p.online !== false);
+      if (online.length < 2) checkPlayerCount();
+    }
   });
 
   // ── Join/leave notifications
@@ -1308,7 +1316,7 @@ function setupRoom() {
     }
   });
   // Track previous online state to fire leave only on actual disconnect
-  // Debounce per-player: ignore multiple rapid disconnects from the same person
+  // Debounce per-player: suppress repeated disconnect messages within 30 seconds
   const onlineState = {};
   const leaveDebounce = {};
   playersRef.on("child_changed", snap => {
@@ -1319,13 +1327,17 @@ function setupRoom() {
     const isOnline = p.online !== false;
     onlineState[snap.key] = isOnline;
 
-    if (wasOnline === true && !isOnline) {
-      // Debounce: if a leave was already fired for this player within 10s, skip
+    if (isOnline) {
+      // Player came back online — reset their debounce so next real leave fires
+      delete leaveDebounce[snap.key];
+    } else if (wasOnline === true) {
       const now = Date.now();
-      if (leaveDebounce[snap.key] && now - leaveDebounce[snap.key] < 10000) return;
+      if (leaveDebounce[snap.key] && now - leaveDebounce[snap.key] < 30000) return;
       leaveDebounce[snap.key] = now;
       showNotif(`${p.avatar || "👤"} ${p.name} left the game 👋`, "leave");
       chatRef.push({ type: "system", text: `${p.name} left the game`, ts: now });
+      // Check if game should pause — not enough players to continue
+      checkPlayerCount();
     }
   });
   // Initialise onlineState
@@ -2202,6 +2214,55 @@ function appendChat(msg) {
 
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLAYER COUNT CHECK — pauses game if only 1 player remains
+// ══════════════════════════════════════════════════════════════
+function checkPlayerCount() {
+  if (!gameScreenEntered) return;
+  // Wait 3s before checking — give players a moment to reconnect
+  setTimeout(() => {
+    playersRef.once("value").then(snap => {
+      const players = snap.val() || {};
+      const online = Object.values(players).filter(p => p && p.name && p.online !== false);
+      if (online.length >= 2) return; // still enough players — do nothing
+
+      // Only 1 (or 0) players left — pause the game and go back to waiting room
+      clearInterval(timerInterval);
+      clearInterval(hintInterval);
+      clearTimeout(wordChoiceTimeout);
+      if (window._hintTimeouts) window._hintTimeouts.forEach(t => clearTimeout(t));
+
+      showToast("Not enough players — returning to waiting room...");
+
+      // If host, reset game to waiting state so others can rejoin
+      if (isHost) {
+        gameRef.update({
+          status: "waiting",
+          phase: "waiting",
+          word: "", wordBlanks: "", wordHints: "",
+          drawer: "", startedAt: 0,
+          correctGuessers: []
+        });
+      }
+
+      // Reset local state and go back to waiting room
+      setTimeout(() => {
+        gameScreenEntered = false;
+        currentPhase = "";
+        roundActive = false;
+        hideOverlay("wordOverlay");
+        hideOverlay("resultOverlay");
+        hideOverlay("gameOverOverlay");
+        showScreen("waiting");
+        document.getElementById("startBtn").style.display = isHost ? "block" : "none";
+        document.getElementById("hostSettings").style.display = isHost ? "block" : "none";
+        document.getElementById("waitingMsg").style.display = isHost ? "none" : "block";
+        showToast("Game paused — waiting for more players");
+      }, 2000);
+    });
+  }, 3000);
 }
 
 // ══════════════════════════════════════════════════════════════
