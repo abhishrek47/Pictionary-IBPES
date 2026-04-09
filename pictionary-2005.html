@@ -989,6 +989,7 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
       <div class="panel-tabs">
         <div class="panel-tab active" onclick="switchTab('scores')">🏆 Scores</div>
         <div class="panel-tab" onclick="switchTab('chat')">💬 Guess</div>
+        <div class="panel-tab" onclick="switchTab('players')">👥 Players</div>
       </div>
       <div class="panel-body active" id="tab-scores">
         <div class="score-list" id="scoreList"></div>
@@ -999,6 +1000,9 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
           <input type="text" class="chat-input" id="chatInput" placeholder="Type your guess..." maxlength="60" onkeydown="if(event.key==='Enter')sendGuess()"/>
           <button class="send-btn" onclick="sendGuess()">➤</button>
         </div>
+      </div>
+      <div class="panel-body" id="tab-players">
+        <div id="inGamePlayerList" style="padding:8px;"></div>
       </div>
     </div>
   </div>
@@ -1248,8 +1252,18 @@ function joinRoom() {
   roomCode = code;
   isHost = false;
   assignAvatar();
-  db.ref("rooms/" + roomCode).once("value").then(snap => {
-    if (!snap.exists()) { showToast("Room not found! Check the code."); return; }
+  // Check room exists AND has at least one online player (not stale leftover data)
+  Promise.all([
+    db.ref("rooms/" + roomCode + "/players").once("value"),
+    db.ref("rooms/" + roomCode + "/game").once("value")
+  ]).then(([pSnap, gSnap]) => {
+    const players = pSnap.val() || {};
+    const game    = gSnap.val();
+    const onlineCount = Object.values(players).filter(p => p && p.online !== false && p.name).length;
+    if (!game || onlineCount === 0) {
+      showToast("Room not found! Ask the host to create one first.");
+      return;
+    }
     setupRoom();
   });
 }
@@ -1303,6 +1317,7 @@ function setupRoom() {
   // ── Players list listener
   playersRef.on("value", snap => {
     renderPlayers(snap.val() || {});
+    renderInGamePlayers(snap.val() || {});
   });
 
   // ── Join/leave notifications
@@ -1460,14 +1475,21 @@ function handleGameState(g) {
   document.getElementById("roundBadge").textContent = `R${currentRound}/${totalRounds}`;
 
   // Update drawer label + toolbar + canvas interaction
-  playersRef.child(currentDrawer).once("value").then(snap => {
-    const p = snap.val();
-    const dname = p ? p.name : "?";
-    document.getElementById("drawerLabel").textContent = `🖌️ ${dname}`;
-    document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
-    canvas.style.cursor    = amDrawing ? "crosshair" : "default";
-    canvas.style.pointerEvents = amDrawing ? "auto" : "none";
-  });
+  if (!currentDrawer) {
+    document.getElementById("drawerLabel").textContent = "🖌️ —";
+    document.getElementById("drawToolbar").className = "draw-toolbar";
+    canvas.style.cursor = "default";
+    canvas.style.pointerEvents = "none";
+  } else {
+    playersRef.child(currentDrawer).once("value").then(snap => {
+      const p = snap.val();
+      const dname = (p && p.name) ? p.name : "?";
+      document.getElementById("drawerLabel").textContent = `🖌️ ${dname}`;
+      document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
+      canvas.style.cursor    = amDrawing ? "crosshair" : "default";
+      canvas.style.pointerEvents = amDrawing ? "auto" : "none";
+    });
+  }
 
   const phaseKey = g.phase + "_" + g.round;
   const isNewPhase = phaseKey !== currentPhase;
@@ -2162,6 +2184,43 @@ function renderScores(g) {
       list.appendChild(item);
     });
   });
+}
+
+function renderInGamePlayers(players) {
+  const el = document.getElementById("inGamePlayerList");
+  if (!el) return;
+  const online = Object.entries(players || {})
+    .filter(([, p]) => p && p.online !== false && p.name)
+    .sort(([, a], [, b]) => (b.score || 0) - (a.score || 0));
+
+  el.innerHTML = `
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;
+                color:var(--muted);padding:4px 4px 10px;font-weight:700;">
+      ${online.length} Player${online.length !== 1 ? "s" : ""} In Room
+    </div>
+  ` + online.map(([id, p]) => {
+    const isMe     = id === myId;
+    const isDrawer = id === currentDrawer;
+    const badge    = isDrawer ? "🖌️" : (isMe ? "👤" : "");
+    const youLabel = isMe ? `<span style="font-size:10px;color:var(--mint);font-weight:700;"> (you)</span>` : "";
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;
+                  border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="width:30px;height:30px;border-radius:50%;
+                    background:${p.avatarColor || "#444"};
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:15px;flex-shrink:0;">${p.avatar || "👤"}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--white);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${escHtml(p.name)}${youLabel}
+          </div>
+          ${isDrawer ? `<div style="font-size:10px;color:var(--gold);">Drawing now 🖌️</div>` : ""}
+        </div>
+        <div style="font-size:11px;color:var(--muted);flex-shrink:0;">${p.score || 0} pts</div>
+      </div>
+    `;
+  }).join("");
 }
 
 // ══════════════════════════════════════════════════════════════
