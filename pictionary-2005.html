@@ -980,6 +980,7 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
   <!-- Audio bar -->
   <div class="audio-bar">
     <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙️ Mic On</button>
+    <button class="mic-btn" id="deafBtn" onclick="toggleDeafen()" style="background:#555;" title="Mute all audio">🔊 Audio On</button>
     <div class="speaking-list" id="speakingList"></div>
     <span style="font-size:12px;color:var(--muted);flex-shrink:0;" id="audioStatus">Audio ready</span>
     <button onclick="leaveGame()" style="background:var(--coral);border:none;border-radius:8px;padding:8px 14px;color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;">🚪 Leave</button>
@@ -1107,7 +1108,9 @@ let tool = "pen", brushSize = 6, brushColor = "#000000";
 let strokes = [], currentStroke = [];
 let myAvatar, myAvatarColor;
 let roundActive = false, hasGuessedCorrect = false;
-let usedWords = [];  // track used words this game session
+let usedWords = [];
+// Player name cache — populated from playersRef listener, used for instant drawer label
+const playerNameCache = {};
 
 // Phase tracking — use a single string, compare carefully
 let currentPhase = "";
@@ -1279,8 +1282,13 @@ function setupRoom() {
 
   // ── Players list listener
   playersRef.on("value", snap => {
-    renderPlayers(snap.val() || {});
-    renderInGamePlayers(snap.val() || {});
+    const all = snap.val() || {};
+    // Populate name cache for instant drawer label (no async lookup needed)
+    Object.entries(all).forEach(([id, p]) => {
+      if (p && p.name) playerNameCache[id] = p.name;
+    });
+    renderPlayers(all);
+    renderInGamePlayers(all);
   });
 
   // ── Join/leave notifications
@@ -1300,7 +1308,9 @@ function setupRoom() {
     }
   });
   // Track previous online state to fire leave only on actual disconnect
+  // Debounce per-player: ignore multiple rapid disconnects from the same person
   const onlineState = {};
+  const leaveDebounce = {};
   playersRef.on("child_changed", snap => {
     if (snap.key === myId) return;
     const p = snap.val();
@@ -1308,9 +1318,14 @@ function setupRoom() {
     const wasOnline = onlineState[snap.key];
     const isOnline = p.online !== false;
     onlineState[snap.key] = isOnline;
+
     if (wasOnline === true && !isOnline) {
+      // Debounce: if a leave was already fired for this player within 10s, skip
+      const now = Date.now();
+      if (leaveDebounce[snap.key] && now - leaveDebounce[snap.key] < 10000) return;
+      leaveDebounce[snap.key] = now;
       showNotif(`${p.avatar || "👤"} ${p.name} left the game 👋`, "leave");
-      chatRef.push({ type: "system", text: `${p.name} left the game`, ts: Date.now() });
+      chatRef.push({ type: "system", text: `${p.name} left the game`, ts: now });
     }
   });
   // Initialise onlineState
@@ -1473,22 +1488,26 @@ function handleGameState(g) {
 
   document.getElementById("roundBadge").textContent = `R${currentRound}/${totalRounds}`;
 
-  // Update drawer label + toolbar + canvas interaction
+  // Update drawer label — use cache for instant display, then async as fallback
   if (!currentDrawer) {
     document.getElementById("drawerLabel").textContent = "🖌️ —";
-    document.getElementById("drawToolbar").className = "draw-toolbar";
-    canvas.style.cursor = "default";
-    canvas.style.pointerEvents = "none";
   } else {
+    // Show cached name immediately (populated by playersRef listener)
+    const cachedName = playerNameCache[currentDrawer] || myName;
+    document.getElementById("drawerLabel").textContent = `🖌️ ${amDrawing ? "You" : (cachedName || "...")}`;
+    // Async update in case cache is stale (first join etc)
     playersRef.child(currentDrawer).once("value").then(snap => {
       const p = snap.val();
-      const dname = (p && p.name) ? p.name : "?";
-      document.getElementById("drawerLabel").textContent = `🖌️ ${dname}`;
-      document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
-      canvas.style.cursor    = amDrawing ? "crosshair" : "default";
-      canvas.style.pointerEvents = amDrawing ? "auto" : "none";
+      const dname = (p && p.name) ? p.name : (cachedName || "?");
+      if (p && p.name) playerNameCache[currentDrawer] = p.name;
+      document.getElementById("drawerLabel").textContent = `🖌️ ${amDrawing ? "You" : dname}`;
     });
   }
+
+  // Set toolbar and canvas interaction SYNCHRONOUSLY — never async
+  document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
+  canvas.style.cursor        = amDrawing ? "crosshair" : "default";
+  canvas.style.pointerEvents = amDrawing ? "auto" : "none";
 
   const phaseKey = g.phase + "_" + g.round;
   const isNewPhase = phaseKey !== currentPhase;
@@ -1519,11 +1538,10 @@ function handlePicking(g, isNewPhase) {
   document.getElementById("tNum").textContent = "⏳";
   document.getElementById("tFill").style.strokeDashoffset = 0;
 
-  // Reset chat input
+  // Reset chat input — always re-enable for guessers, disable for drawer
   const inp = document.getElementById("chatInput");
-  inp.disabled = false;
+  inp.disabled = amDrawing;
   inp.placeholder = amDrawing ? "You are drawing — no peeking! 🙈" : "Type your guess...";
-  if (amDrawing) inp.disabled = true;
 
   // Hide canvasWaiting except for guessers
   document.getElementById("canvasWaiting").style.display = amDrawing ? "none" : "flex";
@@ -1575,12 +1593,18 @@ function handlePicking(g, isNewPhase) {
 // ── PHASE: DRAWING
 function handleDrawing(g, isNewPhase) {
   roundActive = true;
-  if (isNewPhase) hasGuessedCorrect = false; // only reset on actual new round, not re-fires
+  if (isNewPhase) hasGuessedCorrect = false;
   hideOverlay("wordOverlay");
   clearTimeout(wordChoiceTimeout);
 
   // Always hide canvasWaiting when drawing starts — for everyone
   document.getElementById("canvasWaiting").style.display = "none";
+
+  // Enforce canvas interaction state — do this every time, not just isNewPhase
+  // This is redundant-but-safe: ensures drawer can always draw even on re-fires
+  document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
+  canvas.style.cursor        = amDrawing ? "crosshair" : "default";
+  canvas.style.pointerEvents = amDrawing ? "auto" : "none";
 
   const inp = document.getElementById("chatInput");
 
@@ -1625,6 +1649,11 @@ function handleRoundEnd(g) {
   clearInterval(timerInterval);
   clearInterval(hintInterval);
   roundActive = false;
+
+  // Always re-enable chat input on round end — it may have been frozen by "you guessed it"
+  const inp = document.getElementById("chatInput");
+  inp.disabled = false;
+  inp.placeholder = "Type your guess...";
 
   // Reveal word to everyone
   const revealedWord = g.revealWord || g.word || "?";
@@ -2346,6 +2375,8 @@ async function joinAudio() {
       await agoraClient.subscribe(user, mediaType);
       if (mediaType === "audio") {
         user.audioTrack.play();
+        // Apply deafen state if user joined while we are deafened
+        if (isDeafened) user.audioTrack.setVolume(0);
         updateSpeakerDot(String(user.uid), true);
       }
     });
@@ -2460,6 +2491,35 @@ async function toggleMic() {
   } finally {
     micToggling = false;
     btn.style.opacity = "";
+  }
+}
+
+// Deafen toggle — mutes ALL incoming audio without leaving the channel
+let isDeafened = false;
+function toggleDeafen() {
+  const btn = document.getElementById("deafBtn");
+  isDeafened = !isDeafened;
+
+  if (isDeafened) {
+    // Mute all currently playing remote tracks
+    if (agoraClient) {
+      agoraClient.remoteUsers.forEach(user => {
+        if (user.audioTrack) user.audioTrack.setVolume(0);
+      });
+    }
+    btn.textContent = "🔇 Audio Off";
+    btn.style.background = "#c0392b";
+    showToast("Audio muted — you won't hear others");
+  } else {
+    // Restore all remote tracks to full volume
+    if (agoraClient) {
+      agoraClient.remoteUsers.forEach(user => {
+        if (user.audioTrack) user.audioTrack.setVolume(100);
+      });
+    }
+    btn.textContent = "🔊 Audio On";
+    btn.style.background = "#555";
+    showToast("Audio restored");
   }
 }
 
