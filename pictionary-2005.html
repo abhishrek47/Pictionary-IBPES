@@ -914,18 +914,21 @@ function enterGameScreen(g){
   initCanvas();
   buildColorPalette();
 
-  // Listen for strokes (for guessers)
-  strokesRef.on("child_added", snap=>{
-    if(amDrawing) return;
-    const s=snap.val();
-    if(s) drawRemoteStroke(s);
-  });
-
-  // Clear canvas when new round starts
+  // Single value listener — redraws entire canvas on every change.
+  // Handles late joiners, reconnects, and undo correctly.
   strokesRef.on("value", snap=>{
-    if(!amDrawing && !snap.val()){
-      clearCanvasLocal();
-    }
+    const data=snap.val();
+    clearCanvasLocal();
+    if(!data) return;
+    // data is a keyed object from Firebase push()
+    Object.values(data).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(s=>{
+      if(s.fill){
+        // fill bucket stroke
+        if(ctx){ ctx.fillStyle=s.fill; ctx.fillRect(0,0,canvas.width,canvas.height); }
+      } else {
+        drawRemoteStroke(s);
+      }
+    });
   });
 }
 
@@ -961,11 +964,12 @@ function handleGameState(g){
     document.getElementById("tNum").textContent="⏳";
     clearCanvasLocal();
     if(!amDrawing){
-      strokesRef.remove();
+      // Guessers must NOT remove strokes - only update UI
       document.getElementById("topBlanks").textContent="?  ?  ?";
       document.getElementById("topWord").style.display="none";
       document.getElementById("topBlanks").style.display="block";
       document.getElementById("canvasWaiting").textContent="Drawer is choosing a word...";
+      document.getElementById("canvasWaiting").style.display="flex";
     } else {
       // Show word choices
       wordChoices=g.wordChoices||getWordChoices(gameSettings.difficulty);
@@ -984,22 +988,22 @@ function handleGameState(g){
     hasGuessedCorrect=false;
     correctGuessers=g.correctGuessers||[];
     hideOverlay("wordOverlay");
-    clearCanvasLocal();
-    strokesRef.remove();
+    document.getElementById("canvasWaiting").style.display="none";
 
     if(amDrawing){
+      // Drawer clears Firebase strokes for new round
+      strokesRef.remove();
+      strokes=[];
       currentWord=g.word||"";
       document.getElementById("topWord").textContent=currentWord;
       document.getElementById("topWord").style.display="block";
       document.getElementById("topBlanks").style.display="none";
-      document.getElementById("canvasWaiting").style.display="none";
     } else {
       currentWord="";
       const blanks=g.wordBlanks||"_ _ _";
       document.getElementById("topBlanks").textContent=blanks;
       document.getElementById("topBlanks").style.display="block";
       document.getElementById("topWord").style.display="none";
-      document.getElementById("canvasWaiting").style.display="none";
     }
 
     // Start timer sync
@@ -1201,13 +1205,14 @@ function clearCanvasLocal(){
 function undoDraw(){
   if(!amDrawing||!strokes.length) return;
   strokes.pop();
-  // Redraw all
-  clearCanvasLocal();
-  strokes.forEach(s=>drawRemoteStroke(s));
-  // Re-sync Firebase
+  // Remove all from Firebase and re-push remaining strokes
+  // The value listener on guessers' side will auto-redraw
   strokesRef.remove().then(()=>{
     strokes.forEach(s=>strokesRef.push(s));
   });
+  // Redraw locally too
+  clearCanvasLocal();
+  strokes.forEach(s=>drawRemoteStroke(s));
 }
 
 function fillBucket(){
@@ -1535,7 +1540,10 @@ async function joinAudio(){
 
 async function toggleMic(){
   const btn=document.getElementById("micBtn");
-  if(!agoraClient) return;
+  if(!agoraClient){
+    showToast("Audio not connected yet");
+    return;
+  }
   try {
     if(micMuted){
       if(!localAudioTrack){
@@ -1543,6 +1551,7 @@ async function toggleMic(){
         await agoraClient.publish([localAudioTrack]);
       } else {
         await localAudioTrack.setMuted(false);
+        await agoraClient.publish([localAudioTrack]);
       }
       micMuted=false;
       btn.textContent="🎙️ Mic On";
@@ -1554,7 +1563,17 @@ async function toggleMic(){
       btn.className="mic-btn muted";
     }
   } catch(e){
-    showToast("Mic error: "+e.message);
+    // DEVICE_NOT_FOUND = no mic hardware, show friendly message
+    if(e.code==="DEVICE_NOT_FOUND" || e.message?.includes("DEVICE_NOT_FOUND") || e.message?.includes("NotFoundError")){
+      showToast("No microphone found on this device");
+      btn.textContent="🔇 No Mic";
+      btn.className="mic-btn muted";
+      document.getElementById("audioStatus").textContent="No mic hardware";
+    } else if(e.message?.includes("Permission")||e.message?.includes("NotAllowed")){
+      showToast("Mic permission denied — check browser settings");
+    } else {
+      console.warn("Mic error:",e);
+    }
   }
 }
 
