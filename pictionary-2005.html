@@ -49,15 +49,13 @@ body{
    LOBBY SCREEN
 ══════════════════════════════════════ */
 #lobby{
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-  background:radial-gradient(ellipse at 30% 20%, rgba(240,192,64,0.08) 0%, transparent 60%),
-             radial-gradient(ellipse at 70% 80%, rgba(255,107,107,0.06) 0%, transparent 60%),
-             var(--bg);
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:0;
+  background:#0d1117;
   overflow-y:auto;
 }
-.lobby-inner{width:100%;max-width:420px;text-align:center;}
+.lobby-inner{width:100%;max-width:420px;text-align:center;margin:0 auto;padding:0 20px 40px;}
 .game-logo{
   width:90px;height:90px;border-radius:50%;
   background:linear-gradient(135deg,var(--gold),var(--coral));
@@ -94,7 +92,7 @@ input[type=text],input[type=number],select{
   width:100%;padding:12px 14px;
   background:var(--surface);border:1.5px solid var(--border);
   border-radius:10px;color:var(--white);
-  font-family:'Nunito',sans-serif;font-size:15px;font-weight:600;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:600;
   outline:none;transition:border-color 0.2s;
 }
 input:focus,select:focus{border-color:var(--gold);}
@@ -241,7 +239,7 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
 
 /* Right panel */
 .right-panel{
-  width:100%;max-height:200px;
+  width:100%;max-height:220px;
   background:var(--surface);border-top:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
 }
@@ -291,7 +289,7 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
 .chat-input{
   flex:1;background:var(--card);border:1.5px solid var(--border);
   border-radius:8px;padding:9px 12px;color:var(--white);
-  font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;outline:none;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:600;outline:none;
 }
 .chat-input:focus{border-color:var(--sky);}
 .send-btn{
@@ -417,6 +415,54 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
   .audio-bar{padding-bottom:max(8px,env(safe-area-inset-bottom));}
 }
 
+/* Mobile: make overlay card scrollable if content overflows */
+@media(max-width:480px){
+  .overlay-card{
+    max-height:90vh;
+    overflow-y:auto;
+    padding:20px 16px;
+  }
+  .word-choice{
+    font-size:17px;
+    padding:13px 14px;
+  }
+  .audio-bar{
+    padding:6px 10px;
+  }
+  .audio-bar .mic-btn{
+    padding:7px 12px;
+    font-size:12px;
+  }
+  .game-topbar{
+    padding:6px 8px;
+    gap:6px;
+  }
+  .drawer-label{
+    font-size:11px;
+    padding:3px 8px;
+  }
+  .round-badge{
+    font-size:11px;
+    padding:3px 8px;
+  }
+  .topbar-word .word-val{
+    font-size:15px;
+  }
+  .topbar-word .word-blanks{
+    font-size:15px;
+    letter-spacing:4px;
+  }
+  .t-btn{
+    width:36px;
+    height:36px;
+    font-size:15px;
+  }
+  .panel-tab{
+    font-size:11px;
+    padding:7px;
+  }
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -427,10 +473,208 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
 
 <!-- ══════════ LOBBY ══════════ -->
 <div id="lobby" class="screen active">
-  <div class="lobby-inner">
-    <div class="game-logo">🎨</div>
-    <h1 class="game-title">Pictionary!</h1>
-    <p class="game-tagline">IB Patel · Class of 2005 Reunion</p>
+
+  <!-- Nostalgic hero banner -->
+  <div style="position:relative;width:100%;overflow:hidden;flex-shrink:0;">
+
+    <!-- Illustrated school SVG -->
+    <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;">
+      <defs>
+        <filter id="sepia">
+          <feColorMatrix type="matrix"
+            values="0.393 0.769 0.189 0 0
+                    0.349 0.686 0.168 0 0
+                    0.272 0.534 0.131 0 0
+                    0     0     0     1 0"/>
+        </filter>
+        <filter id="aged">
+          <feColorMatrix type="matrix"
+            values="0.42 0.72 0.16 0 0.04
+                    0.36 0.64 0.14 0 0.02
+                    0.27 0.48 0.11 0 0
+                    0    0    0    1 0"/>
+          <feComposite in2="SourceGraphic" operator="in"/>
+        </filter>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8a96e" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#8b6914" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5a7a2e" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#3a5a1e" stop-opacity="0.8"/>
+        </linearGradient>
+        <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8a86a"/>
+          <stop offset="100%" stop-color="#a87e3c"/>
+        </linearGradient>
+        <linearGradient id="roofGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7a3e1a"/>
+          <stop offset="100%" stop-color="#5a2e0e"/>
+        </linearGradient>
+        <pattern id="grain" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="4" fill="transparent"/>
+          <circle cx="1" cy="1" r="0.4" fill="#000" opacity="0.04"/>
+          <circle cx="3" cy="3" r="0.4" fill="#000" opacity="0.04"/>
+        </pattern>
+      </defs>
+
+      <!-- Sky -->
+      <rect width="800" height="320" fill="#1a1000"/>
+      <rect width="800" height="320" fill="url(#skyGrad)"/>
+
+      <!-- Distant trees / background -->
+      <ellipse cx="60" cy="210" rx="38" ry="55" fill="#2a4a10" opacity="0.7"/>
+      <ellipse cx="90" cy="195" rx="30" ry="48" fill="#3a5a18" opacity="0.8"/>
+      <ellipse cx="720" cy="205" rx="42" ry="58" fill="#2a4a10" opacity="0.7"/>
+      <ellipse cx="750" cy="190" rx="32" ry="50" fill="#3a5a18" opacity="0.75"/>
+      <ellipse cx="770" cy="210" rx="28" ry="44" fill="#2a4a10" opacity="0.65"/>
+
+      <!-- Ground -->
+      <rect x="0" y="258" width="800" height="62" fill="url(#groundGrad)"/>
+      <!-- Ground detail — path / road -->
+      <rect x="310" y="258" width="180" height="8" fill="#8b7030" opacity="0.5"/>
+
+      <!-- ── MAIN SCHOOL BUILDING ── -->
+      <!-- Central block -->
+      <rect x="220" y="110" width="360" height="150" fill="url(#wallGrad)"/>
+      <!-- Horizontal band detail -->
+      <rect x="220" y="155" width="360" height="6" fill="#8b6010" opacity="0.5"/>
+      <rect x="220" y="200" width="360" height="4" fill="#8b6010" opacity="0.4"/>
+
+      <!-- Left wing -->
+      <rect x="110" y="140" width="120" height="120" fill="#b89050"/>
+      <rect x="110" y="180" width="120" height="5" fill="#8b6010" opacity="0.4"/>
+
+      <!-- Right wing -->
+      <rect x="570" y="140" width="120" height="120" fill="#b89050"/>
+      <rect x="570" y="180" width="120" height="5" fill="#8b6010" opacity="0.4"/>
+
+      <!-- ── ROOFS ── -->
+      <!-- Central roof -->
+      <polygon points="210,110 400,60 590,110" fill="url(#roofGrad)"/>
+      <!-- Roof ridge detail -->
+      <line x1="210" y1="110" x2="590" y2="110" stroke="#5a2e0e" stroke-width="3"/>
+      <!-- Left wing roof -->
+      <polygon points="100,140 170,108 240,140" fill="#6b3515"/>
+      <!-- Right wing roof -->
+      <polygon points="560,140 630,108 700,140" fill="#6b3515"/>
+
+      <!-- ── CENTRAL TOWER / PEDIMENT ── -->
+      <rect x="358" y="72" width="84" height="40" fill="#c8a070"/>
+      <polygon points="352,72 400,48 448,72" fill="#5a2e0e"/>
+      <!-- Tower windows -->
+      <rect x="370" y="80" width="18" height="22" rx="9" fill="#1a1000" opacity="0.7"/>
+      <rect x="412" y="80" width="18" height="22" rx="9" fill="#1a1000" opacity="0.7"/>
+      <!-- Flag pole -->
+      <line x1="400" y1="48" x2="400" y2="20" stroke="#8b6010" stroke-width="2"/>
+      <polygon points="400,20 424,28 400,36" fill="#c8291a" opacity="0.9"/>
+
+      <!-- ── MAIN ENTRANCE ── -->
+      <!-- Grand arch -->
+      <rect x="352" y="180" width="96" height="80" fill="#8b6010" opacity="0.3"/>
+      <path d="M352,220 Q352,180 400,180 Q448,180 448,220 L448,260 L352,260 Z" fill="#1a1000" opacity="0.8"/>
+      <!-- Arch highlight -->
+      <path d="M358,220 Q358,186 400,186 Q442,186 442,220" fill="none" stroke="#c8a070" stroke-width="2" opacity="0.6"/>
+      <!-- Door steps -->
+      <rect x="344" y="255" width="112" height="5" fill="#8b7030" opacity="0.7"/>
+      <rect x="338" y="260" width="124" height="3" fill="#7a6020" opacity="0.6"/>
+
+      <!-- ── WINDOWS — MAIN BLOCK ── -->
+      <!-- Row 1 -->
+      <rect x="238" y="120" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="238" y="120" width="32" height="28" rx="3" fill="none" stroke="#c8a070" stroke-width="1.5" opacity="0.5"/>
+      <rect x="286" y="120" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="286" y="120" width="32" height="28" rx="3" fill="none" stroke="#c8a070" stroke-width="1.5" opacity="0.5"/>
+      <rect x="482" y="120" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="482" y="120" width="32" height="28" rx="3" fill="none" stroke="#c8a070" stroke-width="1.5" opacity="0.5"/>
+      <rect x="530" y="120" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="530" y="120" width="32" height="28" rx="3" fill="none" stroke="#c8a070" stroke-width="1.5" opacity="0.5"/>
+      <!-- Row 2 -->
+      <rect x="238" y="165" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="286" y="165" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="482" y="165" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <rect x="530" y="165" width="32" height="28" rx="3" fill="#1a1000" opacity="0.75"/>
+      <!-- Warm light inside windows -->
+      <rect x="240" y="122" width="28" height="24" rx="2" fill="#f0c040" opacity="0.12"/>
+      <rect x="288" y="122" width="28" height="24" rx="2" fill="#f0c040" opacity="0.12"/>
+      <rect x="484" y="122" width="28" height="24" rx="2" fill="#f0c040" opacity="0.12"/>
+      <rect x="532" y="122" width="28" height="24" rx="2" fill="#f0c040" opacity="0.12"/>
+
+      <!-- ── WING WINDOWS ── -->
+      <rect x="126" y="152" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="162" y="152" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="126" y="192" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="162" y="192" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="586" y="152" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="622" y="152" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="586" y="192" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+      <rect x="622" y="192" width="26" height="24" rx="3" fill="#1a1000" opacity="0.7"/>
+
+      <!-- ── PILLARS / COLUMNS ── -->
+      <rect x="236" y="200" width="10" height="58" fill="#a07828" opacity="0.6"/>
+      <rect x="334" y="200" width="10" height="58" fill="#a07828" opacity="0.6"/>
+      <rect x="456" y="200" width="10" height="58" fill="#a07828" opacity="0.6"/>
+      <rect x="554" y="200" width="10" height="58" fill="#a07828" opacity="0.6"/>
+
+      <!-- ── COMPOUND WALL ── -->
+      <rect x="55" y="245" width="690" height="18" fill="#8b7030" opacity="0.7"/>
+      <!-- Wall top detail -->
+      <rect x="55" y="242" width="690" height="4" fill="#a08040" opacity="0.5"/>
+      <!-- Gate posts -->
+      <rect x="358" y="228" width="14" height="32" fill="#a08040" opacity="0.8"/>
+      <rect x="428" y="228" width="14" height="32" fill="#a08040" opacity="0.8"/>
+      <!-- Gate top ornament -->
+      <circle cx="365" cy="228" r="5" fill="#c8a060" opacity="0.8"/>
+      <circle cx="435" cy="228" r="5" fill="#c8a060" opacity="0.8"/>
+
+      <!-- ── FOREGROUND TREES ── -->
+      <rect x="140" y="210" width="8" height="48" fill="#5a3a10" opacity="0.8"/>
+      <ellipse cx="144" cy="200" rx="22" ry="30" fill="#2a5a12" opacity="0.85"/>
+      <ellipse cx="144" cy="192" rx="16" ry="22" fill="#3a6a18" opacity="0.8"/>
+      <rect x="648" y="210" width="8" height="48" fill="#5a3a10" opacity="0.8"/>
+      <ellipse cx="652" cy="200" rx="22" ry="30" fill="#2a5a12" opacity="0.85"/>
+      <ellipse cx="652" cy="192" rx="16" ry="22" fill="#3a6a18" opacity="0.8"/>
+
+      <!-- ── SCHOOL NAME BOARD ── -->
+      <rect x="280" y="224" width="240" height="28" rx="4" fill="#1a1000" opacity="0.7"/>
+      <text x="400" y="242" text-anchor="middle" fill="#f0c040" font-family="Georgia,serif" font-size="11" font-weight="bold" letter-spacing="1">I. B. PATEL ENGLISH SCHOOL</text>
+
+      <!-- Aged grain overlay -->
+      <rect width="800" height="320" fill="url(#grain)"/>
+      <!-- Vignette -->
+      <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+        <stop offset="60%" stop-color="transparent"/>
+        <stop offset="100%" stop-color="#0d0800" stop-opacity="0.7"/>
+      </radialGradient>
+      <rect width="800" height="320" fill="url(#vignette)"/>
+
+      <!-- Subtle horizontal scan lines for aged photo feel -->
+      <rect width="800" height="320" fill="none" stroke="#0d0800" stroke-width="0" opacity="0.1"/>
+
+      <!-- Year stamp bottom right -->
+      <text x="776" y="312" text-anchor="end" fill="#c8a060" font-family="Georgia,serif" font-size="10" opacity="0.7" letter-spacing="2">Est. 1970</text>
+    </svg>
+
+    <!-- Sepia overlay gradient fading into page -->
+    <div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(to bottom,transparent,#0d1117);"></div>
+
+    <!-- Nostalgic caption -->
+    <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;">
+      <span style="font-family:'Caveat',cursive;font-size:15px;color:rgba(200,168,96,0.85);letter-spacing:1px;">
+        Vallabh Vidyanagar · Anand · Gujarat
+      </span>
+    </div>
+  </div>
+
+  <!-- Scrollable content below illustration -->
+  <div class="lobby-inner" style="padding-top:0;">
+
+    <!-- Title -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <h1 class="game-title" style="margin-bottom:4px;">Pictionary!</h1>
+      <p style="font-family:'Caveat',cursive;font-size:19px;color:rgba(200,168,96,0.9);margin-bottom:2px;">Class of 2005 Reunion</p>
+      <p style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">20 years later · still drawing blanks 🎨</p>
+    </div>
 
     <div class="lobby-card">
       <h3>Your Name</h3>
@@ -456,11 +700,16 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
     <div class="rules-box">
       <p>
         <strong>How to play:</strong> One person draws, everyone guesses in the chat.
-        First correct guess gets points! Drawer picks from 3 words. 
+        First correct guess gets points! Drawer picks from 3 words.
         <strong>Random player draws</strong> each round.
         Audio chat included — unmute to talk! 🎙️
       </p>
     </div>
+
+    <!-- School motto -->
+    <p style="text-align:center;font-family:'Caveat',cursive;font-size:16px;color:rgba(200,168,96,0.6);margin-top:16px;margin-bottom:24px;letter-spacing:1px;">
+      "Ascend from peak to peak" · Charutar Vidya Mandal
+    </p>
   </div>
 </div>
 
@@ -938,6 +1187,8 @@ function enterGameScreen(g) {
     const data = snap.val();
     clearCanvasLocal();
     if (!data) return;
+    // Strokes are arriving — hide the "choosing a word" overlay immediately
+    document.getElementById("canvasWaiting").style.display = "none";
     Object.values(data)
       .sort((a, b) => (a.ts || 0) - (b.ts || 0))
       .forEach(s => {
@@ -974,17 +1225,19 @@ function handleGameState(g) {
   });
 
   const phaseKey = g.phase + "_" + g.round;
-  if (phaseKey === currentPhase) {
-    // Same phase same round — just sync scores and hints
-    renderScores(g);
-    if (g.phase === "drawing" && !amDrawing) syncHints(g.wordHints || "");
-    return;
-  }
+  const isNewPhase = phaseKey !== currentPhase;
   currentPhase = phaseKey;
+
+  // For picking and drawing: always re-run UI updates (canvasWaiting, word display etc)
+  // BUT guard destructive actions (strokesRef.remove, timer reset) to new phase only
+  // For round_end and game_over: only run once
+  if (!isNewPhase && (g.phase === "round_end" || g.phase === "game_over")) {
+    return; // already shown result overlay — don't show again
+  }
 
   // ── Dispatch to phase handlers
   if (g.phase === "picking")    handlePicking(g);
-  if (g.phase === "drawing")    handleDrawing(g);
+  if (g.phase === "drawing")    handleDrawing(g, isNewPhase);
   if (g.phase === "round_end")  handleRoundEnd(g);
   if (g.phase === "game_over")  handleGameOver(g);
 
@@ -1025,42 +1278,50 @@ function handlePicking(g) {
 }
 
 // ── PHASE: DRAWING
-function handleDrawing(g) {
+function handleDrawing(g, isNewPhase) {
   roundActive = true;
   hasGuessedCorrect = false;
   hideOverlay("wordOverlay");
   clearTimeout(wordChoiceTimeout);
+
+  // Always hide canvasWaiting when drawing starts — for everyone
   document.getElementById("canvasWaiting").style.display = "none";
 
   const inp = document.getElementById("chatInput");
 
   if (amDrawing) {
-    // Drawer: clear strokes for new round, show word
-    strokesRef.remove();
-    strokes = [];
+    // Only clear strokes and reset on first entry — not on Firebase re-fires
+    if (isNewPhase) {
+      strokesRef.remove();
+      strokes = [];
+    }
     currentWord = g.word || "";
     document.getElementById("topWord").textContent = currentWord;
     document.getElementById("topWord").style.display = "block";
     document.getElementById("topBlanks").style.display = "none";
     inp.disabled = true;
     inp.placeholder = "You are drawing! 🎨";
-    // Start hint scheduler (host generates hints)
-    if (isHost) scheduleHints(g.word, g.settings ? g.settings.drawTime : 60, g.startedAt);
+    // Only start hint scheduler on first entry
+    if (isNewPhase && isHost) scheduleHints(g.word, g.settings ? g.settings.drawTime : 60, g.startedAt);
   } else {
     currentWord = "";
     const blanks = g.wordBlanks || "_ _ _";
     document.getElementById("topBlanks").textContent = blanks;
     document.getElementById("topBlanks").style.display = "block";
     document.getElementById("topWord").style.display = "none";
-    inp.disabled = hasGuessedCorrect;
-    inp.placeholder = hasGuessedCorrect ? "You guessed it! 🎉" : "Type your guess...";
+    // Always re-enable chat for guessers at start of drawing phase
+    inp.disabled = false;
+    inp.placeholder = "Type your guess...";
     syncHints(g.wordHints || "");
   }
 
-  const startedAt = g.startedAt || Date.now();
-  const drawTime  = g.settings ? g.settings.drawTime : 60;
-  startTimer(startedAt, drawTime);
-  switchTab("chat");
+  // Only restart timer on first entry — re-fires use the same startedAt
+  if (isNewPhase) {
+    const startedAt = g.startedAt || Date.now();
+    const drawTime  = g.settings ? g.settings.drawTime : 60;
+    startTimer(startedAt, drawTime);
+    switchTab("chat");
+  }
 }
 
 // ── PHASE: ROUND_END
