@@ -1318,15 +1318,13 @@ function setupRoom() {
     if (!connected) {
       wasOffline = true;
     } else if (wasOffline) {
-      // Just reconnected — re-sync game state
       wasOffline = false;
       gameRef.once("value").then(snap => {
         const g = snap.val();
         if (!g || g.status !== "playing") return;
-        // If we were in the game, make sure we're on the right screen
         if (gameScreenEntered) {
-          // Force phase re-evaluation by resetting currentPhase
-          currentPhase = "";
+          // Re-sync WITHOUT resetting currentPhase — avoids triggering isNewPhase=true
+          // which would wipe the canvas. Just re-run the UI update for current phase.
           handleGameState(g);
         } else {
           gameScreenEntered = true;
@@ -1569,7 +1567,7 @@ function handlePicking(g, isNewPhase) {
 // ── PHASE: DRAWING
 function handleDrawing(g, isNewPhase) {
   roundActive = true;
-  hasGuessedCorrect = false;
+  if (isNewPhase) hasGuessedCorrect = false; // only reset on actual new round, not re-fires
   hideOverlay("wordOverlay");
   clearTimeout(wordChoiceTimeout);
 
@@ -1706,40 +1704,42 @@ function handleGameOver(g) {
 // HINT SYSTEM (skribbl.io style — reveals letters progressively)
 // ══════════════════════════════════════════════════════════════
 function scheduleHints(word, drawTime, startedAt) {
-  clearInterval(hintInterval);
+  // Cancel any previously scheduled hint timeouts
+  if (window._hintTimeouts) window._hintTimeouts.forEach(t => clearTimeout(t));
+  window._hintTimeouts = [];
   if (!word || !isHost) return;
 
-  // Reveal up to 40% of non-space letters
   const wordChars = word.split("");
-  const revealableIndices = wordChars
-    .map((c, i) => c !== " " ? i : -1)
-    .filter(i => i >= 0);
+  const revealableIndices = wordChars.map((c, i) => c !== " " ? i : -1).filter(i => i >= 0);
   const maxHints = Math.floor(revealableIndices.length * 0.4);
   let hintsGiven = 0;
   const revealed = new Set();
 
-  // Reveal a letter at 33% and 66% of the draw time
   const hintTimes = [
     Math.floor(drawTime * 0.33) * 1000,
     Math.floor(drawTime * 0.66) * 1000
   ];
 
   hintTimes.forEach(delay => {
-    setTimeout(() => {
+    const t = setTimeout(() => {
       if (!roundActive || hintsGiven >= maxHints) return;
-      // Pick a random unrevealed letter
-      const unrevealed = revealableIndices.filter(i => !revealed.has(i));
-      if (!unrevealed.length) return;
-      const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-      revealed.add(pick);
-      hintsGiven++;
-      // Build hint string: revealed chars shown, others as _
-      const hintStr = wordChars.map((c, i) => {
-        if (c === " ") return " ";
-        return revealed.has(i) ? c : "_";
-      }).join(" ");
-      gameRef.update({ wordHints: hintStr });
+      // Verify still in drawing phase for the same word
+      gameRef.once("value").then(snap => {
+        const cur = snap.val();
+        if (!cur || cur.phase !== "drawing" || cur.word !== word) return;
+        const unrevealed = revealableIndices.filter(i => !revealed.has(i));
+        if (!unrevealed.length) return;
+        const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        revealed.add(pick);
+        hintsGiven++;
+        const hintStr = wordChars.map((c, i) => {
+          if (c === " ") return " ";
+          return revealed.has(i) ? c : "_";
+        }).join(" ");
+        gameRef.update({ wordHints: hintStr });
+      });
     }, delay);
+    window._hintTimeouts.push(t);
   });
 }
 
@@ -1844,11 +1844,26 @@ function initCanvas() {
   }
 
   resize();
-  // Debounce resize to avoid mid-draw wipes
+  // After resize, re-fetch strokes so remote viewers see correct canvas
   let resizeTimer;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resize, 300);
+    resizeTimer = setTimeout(() => {
+      resize();
+      // Re-fetch and redraw all strokes from Firebase after resize
+      strokesRef.once("value").then(snap => {
+        const data = snap.val();
+        clearCanvasLocal();
+        if (!data) return;
+        Object.values(data).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(s => {
+          if (s.fill !== undefined) {
+            if (ctx) { ctx.fillStyle = s.fill; ctx.fillRect(0,0,canvas.width,canvas.height); }
+          } else {
+            drawRemoteStroke(s);
+          }
+        });
+      });
+    }, 300);
   });
 
   // Remove old listeners before adding new (prevents duplicates on re-enter)
@@ -1904,7 +1919,11 @@ function endDraw() {
   if (!amDrawing || !drawing) return;
   drawing = false;
   ctx.beginPath();
-  if (currentStroke.length > 1) {
+  if (currentStroke.length >= 1) {
+    // For single-point taps, duplicate the point so it draws as a dot
+    if (currentStroke.length === 1) {
+      currentStroke.push({ x: currentStroke[0].x + 0.1, y: currentStroke[0].y + 0.1 });
+    }
     const s = { points: currentStroke, color: brushColor, size: brushSize, tool, ts: Date.now() };
     strokes.push(s);
     strokesRef.push(s);
@@ -1943,9 +1962,10 @@ function undoDraw() {
   strokes.pop();
   clearCanvasLocal();
   strokes.forEach(s => drawRemoteStroke(s));
-  strokesRef.remove().then(() => {
-    strokes.forEach(s => strokesRef.push(s));
-  });
+  // Write all remaining strokes in one set() call — avoids flash from sequential pushes
+  const newData = {};
+  strokes.forEach((s, i) => { newData["s" + i] = s; });
+  strokesRef.set(Object.keys(newData).length ? newData : null);
 }
 
 function fillBucket() {
@@ -2076,35 +2096,40 @@ function sendGuess() {
 
     if (isCorrect) {
       hasGuessedCorrect = true;
-      // Points: scale from 100 (instant) to 50 (last second)
-      const dt  = g.settings ? g.settings.drawTime : 60;
-      const pts = Math.max(50, Math.round((timeLeft / dt) * 100));
-
       chatRef.push({ type: "correct", uid: myId, name: myName, text, ts: Date.now() });
 
-      // Atomic update via transaction to avoid race conditions
+      // Atomic update via transaction — use values from `current` not closure vars
       gameRef.transaction(current => {
         if (!current) return current;
         if (current.phase !== "drawing") return; // abort if round ended
         const cg = current.correctGuessers || [];
         if (cg.includes(myId)) return; // already recorded
         cg.push(myId);
+        // Score: compute from server time, not stale local timeLeft
+        const dt = current.settings ? current.settings.drawTime : 60;
+        const elapsed = current.startedAt ? Math.floor((serverNow() - current.startedAt) / 1000) : 0;
+        const remaining = Math.max(0, dt - elapsed);
+        const pts = Math.max(50, Math.round((remaining / dt) * 100));
         const s = current.scores || {};
         s[myId] = (s[myId] || 0) + pts;
-        s[currentDrawer] = (s[currentDrawer] || 0) + Math.floor(pts * 0.5);
+        // Use current.drawer from transaction — not stale local currentDrawer
+        if (current.drawer && current.drawer !== myId) {
+          s[current.drawer] = (s[current.drawer] || 0) + Math.floor(pts * 0.5);
+        }
         current.correctGuessers = cg;
         current.scores = s;
         return current;
       }).then(result => {
         if (!result.committed) return;
-        // Check if all guessers have guessed
+        // Check if all NAMED online non-drawer players have guessed
         playersRef.once("value").then(psnap => {
           const players = psnap.val() || {};
-          const total = Object.keys(players)
-            .filter(id => players[id] && players[id].online !== false && id !== currentDrawer).length;
           const g2 = result.snapshot.val();
+          const drawerNow = g2 ? g2.drawer : currentDrawer;
+          const total = Object.keys(players)
+            .filter(id => players[id] && players[id].name && players[id].online !== false && id !== drawerNow).length;
           const cg2 = g2 ? (g2.correctGuessers || []) : [];
-          if (cg2.length >= total) {
+          if (total > 0 && cg2.length >= total) {
             setTimeout(() => endRound(true), 1000);
           }
         });
@@ -2211,7 +2236,7 @@ function advanceToNextRound() {
         current.wordBlanks      = "";
         current.wordHints       = "";
         current.correctGuessers = [];
-        current.round           = (g.round || 1) + 1;
+        current.round           = (current.round || 1) + 1; // use current.round, not stale g.round
         current.startedAt       = 0;
         current.revealWord      = "";
         return current;
@@ -2256,9 +2281,11 @@ function renderScores(g) {
 function renderInGamePlayers(players) {
   const el = document.getElementById("inGamePlayerList");
   if (!el) return;
+  // Use game scores (accurate) not player node scores (always 0)
+  const gameScores = scores || {};
   const online = Object.entries(players || {})
     .filter(([, p]) => p && p.online !== false && p.name)
-    .sort(([, a], [, b]) => (b.score || 0) - (a.score || 0));
+    .sort(([a], [b]) => (gameScores[b] || 0) - (gameScores[a] || 0));
 
   el.innerHTML = `
     <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;
@@ -2268,7 +2295,6 @@ function renderInGamePlayers(players) {
   ` + online.map(([id, p]) => {
     const isMe     = id === myId;
     const isDrawer = id === currentDrawer;
-    const badge    = isDrawer ? "🖌️" : (isMe ? "👤" : "");
     const youLabel = isMe ? `<span style="font-size:10px;color:var(--mint);font-weight:700;"> (you)</span>` : "";
     return `
       <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;
@@ -2284,7 +2310,7 @@ function renderInGamePlayers(players) {
           </div>
           ${isDrawer ? `<div style="font-size:10px;color:var(--gold);">Drawing now 🖌️</div>` : ""}
         </div>
-        <div style="font-size:11px;color:var(--muted);flex-shrink:0;">${p.score || 0} pts</div>
+        <div style="font-size:11px;color:var(--muted);flex-shrink:0;">${gameScores[id] || 0} pts</div>
       </div>
     `;
   }).join("");
@@ -2294,34 +2320,107 @@ function renderInGamePlayers(players) {
 // AGORA AUDIO
 // ══════════════════════════════════════════════════════════════
 async function joinAudio() {
+  // Leave any existing session first — prevents duplicate clients on room restart
+  if (agoraClient) {
+    try {
+      if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
+      await agoraClient.leave();
+    } catch(e) {}
+    agoraClient = null;
+  }
+
   try {
     agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     AgoraRTC.setLogLevel(4); // errors only
 
+    // Remote user starts publishing audio — subscribe and play immediately
     agoraClient.on("user-published", async (user, mediaType) => {
       await agoraClient.subscribe(user, mediaType);
-      if (mediaType === "audio") user.audioTrack.play();
+      if (mediaType === "audio") {
+        user.audioTrack.play();
+        updateSpeakerDot(String(user.uid), true);
+      }
     });
-    agoraClient.on("exception", e => console.warn("Agora:", e));
+
+    // Remote user stopped publishing — stop track and free resources
+    agoraClient.on("user-unpublished", (user, mediaType) => {
+      if (mediaType === "audio") {
+        updateSpeakerDot(String(user.uid), false);
+      }
+    });
+
+    // User left channel entirely
+    agoraClient.on("user-left", user => {
+      updateSpeakerDot(String(user.uid), false);
+    });
+
+    agoraClient.on("exception", e => console.warn("Agora exception:", e));
+
+    // Enable volume indicator for speaking dots — fires every 200ms
+    agoraClient.enableAudioVolumeIndicator();
+    agoraClient.on("volume-indicator", volumes => {
+      volumes.forEach(v => {
+        updateSpeakerDot(String(v.uid), v.level > 5);
+      });
+    });
 
     const uidNum = Math.abs(hashCode(myId)) % 100000000;
     await agoraClient.join(AGORA_APP_ID, roomCode, null, uidNum);
-    document.getElementById("audioStatus").textContent = "🔊 Audio ready";
+    document.getElementById("audioStatus").textContent = "🔊 Voice ready";
   } catch (e) {
     console.warn("Agora join failed:", e);
-    document.getElementById("audioStatus").textContent = "Audio unavailable";
+    document.getElementById("audioStatus").textContent = "Voice unavailable";
   }
 }
 
+// Track speaking state per Agora UID
+const speakerUids = {};
+function updateSpeakerDot(uid, isSpeaking) {
+  speakerUids[uid] = isSpeaking;
+  renderSpeakingList();
+}
+
+function renderSpeakingList() {
+  const list = document.getElementById("speakingList");
+  if (!list) return;
+  // Show dots for currently speaking users
+  const speaking = Object.entries(speakerUids).filter(([,v]) => v).map(([uid]) => uid);
+  if (!speaking.length) { list.innerHTML = ""; return; }
+  // Map Agora UIDs back to player names via the uidNum hash
+  playersRef.once("value").then(snap => {
+    const players = snap.val() || {};
+    list.innerHTML = "";
+    Object.entries(players).forEach(([id, p]) => {
+      if (!p || !p.name) return;
+      const uid = String(Math.abs(hashCode(id)) % 100000000);
+      const isSpeaking = speaking.includes(uid);
+      if (!isSpeaking) return;
+      const dot = document.createElement("div");
+      dot.className = "speaker-dot speaking";
+      dot.style.background = p.avatarColor || "#444";
+      dot.title = p.name;
+      dot.textContent = p.avatar || "👤";
+      list.appendChild(dot);
+    });
+  });
+}
+
+let micToggling = false; // guard against rapid double-tap
 async function toggleMic() {
   const btn = document.getElementById("micBtn");
-  if (micHasError) return;
-  if (!agoraClient) { showToast("Audio not ready yet"); return; }
+  if (micHasError || micToggling) return;
+  if (!agoraClient) { showToast("Voice not ready yet"); return; }
+
+  micToggling = true;
+  btn.style.opacity = "0.6";
 
   try {
     if (micMuted) {
+      // Unmute — create track if first time, otherwise unmute existing
       if (!localAudioTrack) {
-        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: { sampleRate: 48000, stereo: false, bitrate: 64 }
+        });
         await agoraClient.publish([localAudioTrack]);
       } else {
         await localAudioTrack.setMuted(false);
@@ -2330,6 +2429,7 @@ async function toggleMic() {
       btn.textContent = "🎙️ Mic On";
       btn.className   = "mic-btn";
     } else {
+      // Mute — setMuted is lower latency than unpublish/republish
       if (localAudioTrack) await localAudioTrack.setMuted(true);
       micMuted = true;
       btn.textContent = "🔇 Muted";
@@ -2341,11 +2441,17 @@ async function toggleMic() {
       btn.textContent = "🔇 No Mic";
       btn.className   = "mic-btn muted";
       document.getElementById("audioStatus").textContent = "No mic found";
-    } else if (e.message?.includes("Permission") || e.message?.includes("NotAllowed")) {
+    } else if (e.message?.includes("Permission") || e.message?.includes("NotAllowed") || e.name === "NotAllowedError") {
       showToast("Mic permission denied — check browser settings");
+      btn.textContent = "🔇 Denied";
+      btn.className   = "mic-btn muted";
     } else {
-      console.warn("Mic error:", e);
+      console.warn("Mic toggle error:", e);
+      showToast("Mic error — try again");
     }
+  } finally {
+    micToggling = false;
+    btn.style.opacity = "";
   }
 }
 
@@ -2360,11 +2466,13 @@ function showOverlay(id) { document.getElementById(id).classList.add("show"); }
 function hideOverlay(id) { document.getElementById(id).classList.remove("show"); }
 
 function switchTab(tab) {
+  const tabOrder = ["scores", "chat", "players"];
   document.querySelectorAll(".panel-tab").forEach((t, i) => {
-    t.classList.toggle("active", ["scores", "chat"][i] === tab);
+    t.classList.toggle("active", tabOrder[i] === tab);
   });
   document.querySelectorAll(".panel-body").forEach(b => b.classList.remove("active"));
-  document.getElementById("tab-" + tab).classList.add("active");
+  const el = document.getElementById("tab-" + tab);
+  if (el) el.classList.add("active");
 }
 
 function copyRoomCode() {
@@ -2373,8 +2481,24 @@ function copyRoomCode() {
 
 function backToLobby() {
   hideOverlay("gameOverOverlay");
+  // Full cleanup — same as confirmLeave
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
+  if (window._hintTimeouts) { window._hintTimeouts.forEach(t => clearTimeout(t)); window._hintTimeouts = []; }
+  clearTimeout(wordChoiceTimeout);
+  try {
+    if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
+    if (agoraClient) { agoraClient.leave().catch(()=>{}); agoraClient = null; }
+  } catch(e) {}
   gameScreenEntered = false;
   currentPhase = "";
+  roundActive  = false;
+  amDrawing    = false;
+  strokes      = [];
+  scores       = {};
+  micMuted     = true;
+  micToggling  = false;
+  detectLiveGame();
   showScreen("lobby");
 }
 
@@ -2432,16 +2556,20 @@ async function confirmLeave() {
   }
   try {
     if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
-    if (agoraClient) await agoraClient.leave();
+    if (agoraClient) { await agoraClient.leave(); agoraClient = null; }
   } catch (e) { console.warn(e); }
   clearInterval(timerInterval);
   clearInterval(hintInterval);
+  if (window._hintTimeouts) { window._hintTimeouts.forEach(t => clearTimeout(t)); window._hintTimeouts = []; }
+  clearTimeout(wordChoiceTimeout);
   gameScreenEntered = false;
   currentPhase = "";
-  roundActive = false;
-  amDrawing   = false;
-  strokes     = [];
-  scores      = {};
+  roundActive  = false;
+  amDrawing    = false;
+  strokes      = [];
+  scores       = {};
+  micMuted     = true;
+  micToggling  = false;
   detectLiveGame();
   showScreen("lobby");
 }
