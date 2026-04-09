@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -585,6 +586,7 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
     <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙️ Mic On</button>
     <div class="speaking-list" id="speakingList"></div>
     <span style="font-size:12px;color:var(--muted);flex-shrink:0;" id="audioStatus">Audio ready</span>
+    <button onclick="leaveGame()" style="background:var(--coral);border:none;border-radius:8px;padding:8px 14px;color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;">🚪 Leave</button>
   </div>
 </div>
 
@@ -627,7 +629,12 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
 
 <script>
 // ══════════════════════════════════════════════════════════════
-// CONFIG
+// CONFIG — IB Patel Pictionary 2005  v3.0
+// Fixes: duplicate listeners, phase-transition double-fires,
+//   guess detection (word from Firebase), canvas resize,
+//   stale join/leave notifs, host-only endRound race,
+//   hint reveal system, used-word dedup, drawer chat block,
+//   score panel shows guessed status, custom words, auto-hint
 // ══════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD6OgzIwlRzW7GJycQnEkdlS6tt_-CZaYA",
@@ -641,7 +648,7 @@ const FIREBASE_CONFIG = {
 const AGORA_APP_ID = "9d24c6a7d79546cc8db8c00b0f059714";
 
 // ══════════════════════════════════════════════════════════════
-// WORD BANK — School + General (IB Patel themed)
+// WORD BANK
 // ══════════════════════════════════════════════════════════════
 const WORDS = {
   easy:[
@@ -649,75 +656,74 @@ const WORDS = {
     "Bell","Classroom","Library","Playground","School bag","Eraser",
     "Ruler","Notebook","Canteen","Cricket bat","Uniform","Trophy",
     "Bicycle","Umbrella","Rainbow","Football","Swimming","Mountain",
-    "Pizza","Burger","Ice cream","Birthday cake","Guitar","Camera"
+    "Pizza","Burger","Ice cream","Birthday cake","Guitar","Camera",
+    "Boat","Tree","Sun","Moon","Star","Cat","Dog","Fish","Bird","Flower",
+    "Chair","Table","Clock","Phone","Laptop","Car","Train","Plane","Ship"
   ],
   medium:[
     "Science lab","Annual day","Sports day","Roll call","Geometry box",
     "Morning prayer","School trip","Dance performance","Parent teacher meet",
-    "Passing chits","Study group","Tug of war","Badminton","Volley ball",
+    "Passing chits","Study group","Tug of war","Badminton","Volleyball",
     "Treasure hunt","Roller coaster","Juggling","Surfing","Yoga","Meditation",
-    "Barbecue","Camping","Telescope","Microscope","Robot","Rocket"
+    "Barbecue","Camping","Telescope","Microscope","Robot","Rocket",
+    "Firefighter","Dentist","Wedding","Thunderstorm","Earthquake","Avalanche",
+    "Skateboard","Paragliding","Scuba diving","Archery","Fencing","Marathon"
   ],
   hard:[
     "Copying from neighbour","Last bench gang","Canteen rush",
     "Hiding marks from parents","Sneaking food in class",
     "Sleeping in lecture","Borrowing pen forever",
     "Getting called to principal","Mass bunk","Substitute teacher chaos",
-    "Photosynthesis","Pythagorean theorem","Solar eclipse","Earthquake",
-    "Stock market","Parliament","Cryptocurrency","Artificial intelligence"
+    "Photosynthesis","Pythagorean theorem","Solar eclipse",
+    "Stock market","Parliament","Cryptocurrency","Artificial intelligence",
+    "Procrastination","Existential crisis","Midlife crisis","Bureaucracy",
+    "Déjà vu","Jet lag","Tunnel vision","Brain freeze","Writer's block"
   ]
 };
 
 const COLORS = [
   "#000000","#ffffff","#ff4444","#ff8800","#ffdd00","#44dd00",
   "#00aaff","#8855ff","#ff55aa","#00ddcc","#884400","#aaaaaa",
-  "#ff6666","#66ff66","#6666ff","#ffaa00"
+  "#ff6666","#66ff66","#6666ff","#ffaa00","#ff0088","#00ff88",
+  "#0088ff","#884488","#448844","#448888"
 ];
 
-const AVATARS = ["🎨","🚀","🦁","🐯","🦊","🐼","🦄","🐸","🌟","⚡","🔥","💎","🎸","🏆","🌈","🎭"];
-const AVATAR_COLORS = ["#ff6b6b","#ffd93d","#6bcb77","#4d96ff","#ff922b","#cc5de8","#20c997","#f06595"];
+const AVATARS = ["🎨","🚀","🦁","🐯","🦊","🐼","🦄","🐸","🌟","⚡","🔥","💎","🎸","🏆","🌈","🎭","🦋","🐬","🦅","🌺"];
+const AVATAR_COLORS = ["#ff6b6b","#ffd93d","#6bcb77","#4d96ff","#ff922b","#cc5de8","#20c997","#f06595","#74b9ff","#a29bfe"];
 
 // ══════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════
 let db, roomRef, playersRef, gameRef, strokesRef, chatRef;
-let myId = "p_" + Math.random().toString(36).substr(2,9);
-let myName = "";
-let roomCode = "";
-let isHost = false;
-let amDrawing = false;
-let currentWord = "";
-let currentDrawer = "";
-let gameSettings = { drawTime:60, rounds:5, difficulty:"mixed" };
+let myId = "p_" + Math.random().toString(36).substr(2, 9);
+let myName = "", roomCode = "";
+let isHost = false, amDrawing = false;
+let currentWord = "", currentDrawer = "";
+let gameSettings = { drawTime: 60, rounds: 5, difficulty: "mixed" };
 let scores = {};
-let roundScores = {};
-let currentRound = 1;
-let totalRounds = 5;
-let timerInterval = null;
-let timeLeft = 60;
+let currentRound = 1, totalRounds = 5;
+let timerInterval = null, timeLeft = 60;
+let hintInterval = null;
 let wordChoiceTimeout = null;
-let strokeBuffer = [];
-let strokeFlushTimer = null;
-let lastStrokeKey = 0;
 let canvas, ctx;
-let drawing = false;
-let lastX=0,lastY=0;
-let tool="pen";
-let brushSize=6;
-let brushColor="#000000";
-let strokes=[];
-let currentStroke=[];
+let drawing = false, lastX = 0, lastY = 0;
+let tool = "pen", brushSize = 6, brushColor = "#000000";
+let strokes = [], currentStroke = [];
 let myAvatar, myAvatarColor;
-let correctGuessers = [];
-let roundActive = false;
-let hasGuessedCorrect = false;
-let wordChoices = [];
+let roundActive = false, hasGuessedCorrect = false;
+let usedWords = [];  // track used words this game session
+
+// Phase tracking — use a single string, compare carefully
+let currentPhase = "";
+let currentPhaseRound = 0;
 
 // Agora
-let agoraClient = null;
-let localAudioTrack = null;
-let micMuted = true;
-let speakingUsers = {};
+let agoraClient = null, localAudioTrack = null;
+let micMuted = true, micHasError = false;
+
+// Listeners cleanup
+let strokeListener = null;
+let gameScreenEntered = false;
 
 // ══════════════════════════════════════════════════════════════
 // FIREBASE INIT
@@ -728,369 +734,526 @@ db = firebase.database();
 // ══════════════════════════════════════════════════════════════
 // LOBBY
 // ══════════════════════════════════════════════════════════════
-function createRoom(){
+function createRoom() {
   myName = document.getElementById("playerName").value.trim();
-  if(!myName){ showToast("Enter your name first!"); return; }
-  let rawCode = document.getElementById("roomNameInput").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
-  if(!rawCode){ showToast("Enter a room name!"); return; }
-  roomCode = rawCode;
+  if (!myName) { showToast("Enter your name first!"); return; }
+  let raw = document.getElementById("roomNameInput").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!raw) { showToast("Enter a room name!"); return; }
+  roomCode = raw;
   isHost = true;
-  myAvatar = AVATARS[Math.floor(Math.random()*AVATARS.length)];
-  myAvatarColor = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
-  setupRoom();
+  assignAvatar();
+  // Wipe the entire room before creating — removes all stale players, chat, strokes
+  db.ref("rooms/" + roomCode).remove().then(() => setupRoom());
 }
 
-function joinRoom(){
+function joinRoom() {
   myName = document.getElementById("playerName").value.trim();
-  if(!myName){ showToast("Enter your name first!"); return; }
-  let code = document.getElementById("joinCodeInput").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
-  if(!code){ showToast("Enter a room code!"); return; }
+  if (!myName) { showToast("Enter your name first!"); return; }
+  let code = document.getElementById("joinCodeInput").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!code) { showToast("Enter a room code!"); return; }
   roomCode = code;
   isHost = false;
-  myAvatar = AVATARS[Math.floor(Math.random()*AVATARS.length)];
-  myAvatarColor = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
-  // Check room exists
-  db.ref("rooms/"+roomCode).once("value").then(snap=>{
-    if(!snap.exists()){ showToast("Room not found!"); return; }
+  assignAvatar();
+  db.ref("rooms/" + roomCode).once("value").then(snap => {
+    if (!snap.exists()) { showToast("Room not found! Check the code."); return; }
     setupRoom();
   });
 }
 
-function setupRoom(){
-  roomRef   = db.ref("rooms/"+roomCode);
-  playersRef= db.ref("rooms/"+roomCode+"/players");
-  gameRef   = db.ref("rooms/"+roomCode+"/game");
-  strokesRef= db.ref("rooms/"+roomCode+"/strokes");
-  chatRef   = db.ref("rooms/"+roomCode+"/chat");
+function assignAvatar() {
+  myAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  myAvatarColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+}
 
-  // Add self as player
-  const playerData = {
-    name: myName,
-    avatar: myAvatar,
-    avatarColor: myAvatarColor,
-    score: 0,
-    isHost: isHost,
-    joinedAt: firebase.database.ServerValue.TIMESTAMP,
-    online: true
+// ══════════════════════════════════════════════════════════════
+// ROOM SETUP — called once per session
+// ══════════════════════════════════════════════════════════════
+function setupRoom() {
+  roomRef    = db.ref("rooms/" + roomCode);
+  playersRef = db.ref("rooms/" + roomCode + "/players");
+  gameRef    = db.ref("rooms/" + roomCode + "/game");
+  strokesRef = db.ref("rooms/" + roomCode + "/strokes");
+  chatRef    = db.ref("rooms/" + roomCode + "/chat");
+
+  // Write self
+  const myData = {
+    name: myName, avatar: myAvatar, avatarColor: myAvatarColor,
+    score: 0, isHost, online: true,
+    joinedAt: firebase.database.ServerValue.TIMESTAMP
   };
-  playersRef.child(myId).set(playerData);
-  playersRef.child(myId).onDisconnect().update({online:false});
+  playersRef.child(myId).set(myData);
+  playersRef.child(myId).onDisconnect().update({ online: false });
 
-  // If host, initialize game node
-  if(isHost){
+  // Host initialises game node
+  if (isHost) {
     gameRef.set({
-      status:"waiting",
-      settings:{ drawTime:60, rounds:5, difficulty:"mixed" },
-      round:1,
-      drawer:"",
-      word:"",
-      wordBlanks:"",
-      startedAt:0
+      status: "waiting",
+      settings: { drawTime: 60, rounds: 5, difficulty: "mixed" },
+      round: 1, drawer: "", word: "", wordBlanks: "",
+      wordHints: "", correctGuessers: [], scores: {}, startedAt: 0,
+      phase: "waiting", usedWords: []
     });
-    document.getElementById("hostSettings").style.display="block";
-    document.getElementById("startBtn").style.display="block";
-    document.getElementById("waitingMsg").style.display="none";
+    document.getElementById("hostSettings").style.display = "block";
+    document.getElementById("startBtn").style.display = "block";
+    document.getElementById("waitingMsg").style.display = "none";
   } else {
-    document.getElementById("hostSettings").style.display="none";
+    document.getElementById("hostSettings").style.display = "none";
   }
 
-  // Notify join
-  chatRef.push({ type:"system", text:`${myName} joined the game 👋`, ts:Date.now() });
+  // System message — join
+  chatRef.push({ type: "system", text: `${myName} joined the game 👋`, ts: Date.now() });
 
-  // Show waiting room
   showScreen("waiting");
   document.getElementById("displayRoomCode").textContent = roomCode;
 
-  // Listen for players
-  playersRef.on("value", snap=>{
-    const players = snap.val()||{};
-    renderPlayers(players);
-    // Build scores map
-    Object.entries(players).forEach(([id,p])=>{
-      if(scores[id]===undefined) scores[id]=0;
-    });
+  // ── Players list listener
+  playersRef.on("value", snap => {
+    renderPlayers(snap.val() || {});
   });
 
-  // Listen for players joining/leaving
-  playersRef.on("child_added", (snap,prev)=>{
-    if(snap.key===myId) return;
-    const p=snap.val();
-    if(p && p.name) showNotif(`${p.avatar||"👤"} ${p.name} joined!`,"join");
+  // ── Join/leave notifications
+  // readyForNotifs becomes true AFTER the initial player list has loaded
+  // so child_added for existing players doesn't trigger "X joined" toasts
+  let readyForNotifs = false;
+  playersRef.once("value").then(() => {
+    readyForNotifs = true;
   });
-  playersRef.on("child_changed", snap=>{
-    const p=snap.val();
-    if(snap.key!==myId && p && p.online===false && p.name){
-      showNotif(`${p.avatar||"👤"} ${p.name} left the game 👋`,"leave");
-      chatRef.push({type:"system",text:`${p.name} left the game`,ts:Date.now()});
+
+  playersRef.on("child_added", snap => {
+    if (snap.key === myId) return;
+    if (!readyForNotifs) return; // still loading initial list — skip
+    const p = snap.val();
+    if (p && p.name && p.online !== false) {
+      showNotif(`${p.avatar || "👤"} ${p.name} joined!`, "join");
     }
   });
+  // Track previous online state to fire leave only on actual disconnect
+  const onlineState = {};
+  playersRef.on("child_changed", snap => {
+    if (snap.key === myId) return;
+    const p = snap.val();
+    if (!p || !p.name) return;
+    const wasOnline = onlineState[snap.key];
+    const isOnline = p.online !== false;
+    onlineState[snap.key] = isOnline;
+    if (wasOnline === true && !isOnline) {
+      showNotif(`${p.avatar || "👤"} ${p.name} left the game 👋`, "leave");
+      chatRef.push({ type: "system", text: `${p.name} left the game`, ts: Date.now() });
+    }
+  });
+  // Initialise onlineState
+  playersRef.once("value").then(snap => {
+    const p = snap.val() || {};
+    Object.entries(p).forEach(([id, pl]) => { onlineState[id] = pl.online !== false; });
+  });
 
-  // Listen for game state
-  gameRef.on("value", snap=>{
-    const g=snap.val();
-    if(!g) return;
-    if(g.status==="playing" && document.getElementById("game").style.display!=="flex"){
+  // ── Game state listener (single, never re-attached)
+  gameRef.on("value", snap => {
+    const g = snap.val();
+    if (!g) return;
+    if (g.status === "playing" && !gameScreenEntered) {
+      gameScreenEntered = true;
       enterGameScreen(g);
     }
-    if(g.status==="playing"){
+    if (g.status === "playing") {
       handleGameState(g);
     }
   });
 
-  // Listen for chat
-  chatRef.limitToLast(100).on("child_added", snap=>{
-    const msg=snap.val();
-    if(msg) appendChat(msg);
+  // ── Chat listener — only show messages from AFTER we joined
+  // This prevents old round guesses replaying when you reconnect
+  const chatJoinTime = Date.now();
+  chatRef.limitToLast(200).on("child_added", snap => {
+    const msg = snap.val();
+    if (!msg) return;
+    // Filter out messages older than when we joined (stale replays)
+    if (msg.ts && msg.ts < chatJoinTime - 2000) return;
+    appendChat(msg);
   });
 
-  // Agora join
   joinAudio();
 }
 
 // ══════════════════════════════════════════════════════════════
 // WAITING ROOM
 // ══════════════════════════════════════════════════════════════
-function renderPlayers(players){
-  const grid=document.getElementById("playerGrid");
-  grid.innerHTML="";
-  let count=0;
-  Object.entries(players).forEach(([id,p])=>{
-    if(!p || p.online===false) return;
+function renderPlayers(players) {
+  const grid = document.getElementById("playerGrid");
+  grid.innerHTML = "";
+  let count = 0;
+  Object.entries(players).forEach(([id, p]) => {
+    if (!p || p.online === false) return;
     count++;
-    const chip=document.createElement("div");
-    chip.className="player-chip"+(p.isHost?" host":"");
-    chip.innerHTML=`
-      <div class="p-avatar" style="background:${p.avatarColor||"#444"}">${p.avatar||"👤"}</div>
+    const chip = document.createElement("div");
+    chip.className = "player-chip" + (p.isHost ? " host" : "");
+    chip.innerHTML = `
+      <div class="p-avatar" style="background:${p.avatarColor || "#444"}">${p.avatar || "👤"}</div>
       <div class="p-name">${escHtml(p.name)}</div>
-      ${p.isHost?'<div class="p-host">HOST ⭐</div>':''}
+      ${p.isHost ? '<div class="p-host">HOST ⭐</div>' : ''}
     `;
     grid.appendChild(chip);
   });
-  document.getElementById("playerCount").textContent=count;
+  document.getElementById("playerCount").textContent = count;
 }
 
-function startGame(){
-  if(!isHost) return;
-  const dt=parseInt(document.getElementById("drawTime").value);
-  const nr=parseInt(document.getElementById("numRounds").value);
-  const diff=document.getElementById("difficulty").value;
-  gameSettings={drawTime:dt,rounds:nr,difficulty:diff};
-  totalRounds=nr;
+function startGame() {
+  if (!isHost) return;
+  const dt   = parseInt(document.getElementById("drawTime").value);
+  const nr   = parseInt(document.getElementById("numRounds").value);
+  const diff = document.getElementById("difficulty").value;
+  gameSettings = { drawTime: dt, rounds: nr, difficulty: diff };
+  totalRounds = nr;
 
-  // Get online players
-  playersRef.once("value").then(snap=>{
-    const players=snap.val()||{};
-    const ids=Object.keys(players).filter(id=>players[id]&&players[id].online!==false);
-    if(ids.length<2){ showToast("Need at least 2 players!"); return; }
-
-    // Pick random drawer
-    const drawer=ids[Math.floor(Math.random()*ids.length)];
-
-    // Get 3 word choices
-    const choices=getWordChoices(diff);
-
+  playersRef.once("value").then(snap => {
+    const players = snap.val() || {};
+    const ids = Object.keys(players).filter(id => players[id] && players[id].online !== false);
+    if (ids.length < 2) { showToast("Need at least 2 players!"); return; }
+    const drawer = ids[Math.floor(Math.random() * ids.length)];
+    const choices = getWordChoices(diff, []);
     gameRef.update({
-      status:"playing",
-      settings:{drawTime:dt,rounds:nr,difficulty:diff},
-      round:1,
-      drawer:drawer,
-      wordChoices:choices,
-      word:"",
-      wordBlanks:"",
-      correctGuessers:[],
-      startedAt:0,
-      phase:"picking"
+      status: "playing",
+      settings: { drawTime: dt, rounds: nr, difficulty: diff },
+      round: 1, drawer, wordChoices: choices,
+      word: "", wordBlanks: "", wordHints: "",
+      correctGuessers: [], scores: {}, startedAt: 0,
+      phase: "picking", usedWords: []
     });
   });
 }
 
 // ══════════════════════════════════════════════════════════════
-// GAME SCREEN INIT
+// GAME SCREEN — entered exactly once
 // ══════════════════════════════════════════════════════════════
-function enterGameScreen(g){
+function enterGameScreen(g) {
   showScreen("game");
-  totalRounds=g.settings?g.settings.rounds:5;
-  gameSettings=g.settings||gameSettings;
+  totalRounds = g.settings ? g.settings.rounds : 5;
+  gameSettings = g.settings || gameSettings;
   initCanvas();
   buildColorPalette();
 
-  // Single value listener — redraws entire canvas on every change.
-  // Handles late joiners, reconnects, and undo correctly.
-  strokesRef.on("value", snap=>{
-    const data=snap.val();
+  // ── Stroke listener: single value listener, redraws entire canvas
+  // This handles: late joiners, undo, reconnects, clear — everything
+  if (strokeListener) strokesRef.off("value", strokeListener);
+  strokeListener = strokesRef.on("value", snap => {
+    const data = snap.val();
     clearCanvasLocal();
-    if(!data) return;
-    // data is a keyed object from Firebase push()
-    Object.values(data).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(s=>{
-      if(s.fill){
-        // fill bucket stroke
-        if(ctx){ ctx.fillStyle=s.fill; ctx.fillRect(0,0,canvas.width,canvas.height); }
-      } else {
-        drawRemoteStroke(s);
-      }
-    });
+    if (!data) return;
+    Object.values(data)
+      .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+      .forEach(s => {
+        if (s.fill !== undefined) {
+          if (ctx) { ctx.fillStyle = s.fill; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        } else {
+          drawRemoteStroke(s);
+        }
+      });
   });
 }
 
 // ══════════════════════════════════════════════════════════════
-// GAME STATE HANDLER
+// GAME STATE — central dispatcher
 // ══════════════════════════════════════════════════════════════
-let lastPhase="";
-let lastDrawer="";
-let lastRound=0;
+function handleGameState(g) {
+  currentDrawer = g.drawer || "";
+  amDrawing     = (currentDrawer === myId);
+  currentRound  = g.round || 1;
+  totalRounds   = g.settings ? g.settings.rounds : totalRounds;
+  if (g.scores) { scores = g.scores; }
+  if (g.usedWords) { usedWords = g.usedWords; }
 
-function handleGameState(g){
-  currentDrawer=g.drawer||"";
-  amDrawing=(currentDrawer===myId);
-  currentRound=g.round||1;
-  totalRounds=g.settings?g.settings.rounds:totalRounds;
+  document.getElementById("roundBadge").textContent = `R${currentRound}/${totalRounds}`;
 
-  document.getElementById("roundBadge").textContent=`R${currentRound}/${totalRounds}`;
-
-  // Update drawer label
-  playersRef.child(currentDrawer).once("value").then(snap=>{
-    const p=snap.val();
-    const dname=p?p.name:"?";
-    document.getElementById("drawerLabel").textContent=`🖌️ ${dname}`;
-    document.getElementById("drawToolbar").className="draw-toolbar"+(amDrawing?" visible":"");
-    document.getElementById("canvasWaiting").style.display=amDrawing?"none":"flex";
-    canvas.style.cursor=amDrawing?"crosshair":"default";
-    canvas.style.pointerEvents=amDrawing?"auto":"none";
+  // Update drawer label + toolbar + canvas interaction
+  playersRef.child(currentDrawer).once("value").then(snap => {
+    const p = snap.val();
+    const dname = p ? p.name : "?";
+    document.getElementById("drawerLabel").textContent = `🖌️ ${dname}`;
+    document.getElementById("drawToolbar").className = "draw-toolbar" + (amDrawing ? " visible" : "");
+    canvas.style.cursor    = amDrawing ? "crosshair" : "default";
+    canvas.style.pointerEvents = amDrawing ? "auto" : "none";
   });
 
-  // Phase: picking
-  if(g.phase==="picking"){
-    clearInterval(timerInterval);
-    document.getElementById("tNum").textContent="⏳";
-    clearCanvasLocal();
-    if(!amDrawing){
-      // Guessers must NOT remove strokes - only update UI
-      document.getElementById("topBlanks").textContent="?  ?  ?";
-      document.getElementById("topWord").style.display="none";
-      document.getElementById("topBlanks").style.display="block";
-      document.getElementById("canvasWaiting").textContent="Drawer is choosing a word...";
-      document.getElementById("canvasWaiting").style.display="flex";
-    } else {
-      // Show word choices
-      wordChoices=g.wordChoices||getWordChoices(gameSettings.difficulty);
-      showWordOverlay(wordChoices);
-    }
-    hasGuessedCorrect=false;
-    roundActive=false;
-    correctGuessers=[];
+  const phaseKey = g.phase + "_" + g.round;
+  if (phaseKey === currentPhase) {
+    // Same phase same round — just sync scores and hints
+    renderScores(g);
+    if (g.phase === "drawing" && !amDrawing) syncHints(g.wordHints || "");
+    return;
   }
+  currentPhase = phaseKey;
 
-  // Phase: drawing
-  if(g.phase==="drawing" && lastPhase!=="drawing" || (g.phase==="drawing" && g.round!==lastRound)){
-    lastPhase="drawing";
-    lastRound=g.round;
-    roundActive=true;
-    hasGuessedCorrect=false;
-    correctGuessers=g.correctGuessers||[];
+  // ── Dispatch to phase handlers
+  if (g.phase === "picking")    handlePicking(g);
+  if (g.phase === "drawing")    handleDrawing(g);
+  if (g.phase === "round_end")  handleRoundEnd(g);
+  if (g.phase === "game_over")  handleGameOver(g);
+
+  renderScores(g);
+}
+
+// ── PHASE: PICKING
+function handlePicking(g) {
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
+  clearTimeout(wordChoiceTimeout);
+  roundActive = false;
+  hasGuessedCorrect = false;
+  document.getElementById("tNum").textContent = "⏳";
+  document.getElementById("tFill").style.strokeDashoffset = 0;
+
+  // Reset chat input
+  const inp = document.getElementById("chatInput");
+  inp.disabled = false;
+  inp.placeholder = amDrawing ? "You are drawing — no peeking! 🙈" : "Type your guess...";
+  if (amDrawing) inp.disabled = true;
+
+  // Hide canvasWaiting except for guessers
+  document.getElementById("canvasWaiting").style.display = amDrawing ? "none" : "flex";
+  document.getElementById("canvasWaiting").textContent = "✏️ Drawer is choosing a word...";
+
+  // Word display
+  document.getElementById("topWord").style.display = "none";
+  document.getElementById("topBlanks").textContent = "· · ·";
+  document.getElementById("topBlanks").style.display = "block";
+
+  if (amDrawing) {
+    const choices = g.wordChoices || getWordChoices(gameSettings.difficulty, usedWords);
+    showWordOverlay(choices);
+  } else {
     hideOverlay("wordOverlay");
-    document.getElementById("canvasWaiting").style.display="none";
+  }
+}
 
-    if(amDrawing){
-      // Drawer clears Firebase strokes for new round
-      strokesRef.remove();
-      strokes=[];
-      currentWord=g.word||"";
-      document.getElementById("topWord").textContent=currentWord;
-      document.getElementById("topWord").style.display="block";
-      document.getElementById("topBlanks").style.display="none";
-    } else {
-      currentWord="";
-      const blanks=g.wordBlanks||"_ _ _";
-      document.getElementById("topBlanks").textContent=blanks;
-      document.getElementById("topBlanks").style.display="block";
-      document.getElementById("topWord").style.display="none";
-    }
+// ── PHASE: DRAWING
+function handleDrawing(g) {
+  roundActive = true;
+  hasGuessedCorrect = false;
+  hideOverlay("wordOverlay");
+  clearTimeout(wordChoiceTimeout);
+  document.getElementById("canvasWaiting").style.display = "none";
 
-    // Start timer sync
-    const startedAt=g.startedAt||Date.now();
-    const drawTime=g.settings?g.settings.drawTime:60;
-    startTimer(startedAt,drawTime);
-    switchTab("chat");
-    document.getElementById("chatInput").disabled=false;
-    document.getElementById("chatInput").placeholder="Type your guess...";
+  const inp = document.getElementById("chatInput");
+
+  if (amDrawing) {
+    // Drawer: clear strokes for new round, show word
+    strokesRef.remove();
+    strokes = [];
+    currentWord = g.word || "";
+    document.getElementById("topWord").textContent = currentWord;
+    document.getElementById("topWord").style.display = "block";
+    document.getElementById("topBlanks").style.display = "none";
+    inp.disabled = true;
+    inp.placeholder = "You are drawing! 🎨";
+    // Start hint scheduler (host generates hints)
+    if (isHost) scheduleHints(g.word, g.settings ? g.settings.drawTime : 60, g.startedAt);
+  } else {
+    currentWord = "";
+    const blanks = g.wordBlanks || "_ _ _";
+    document.getElementById("topBlanks").textContent = blanks;
+    document.getElementById("topBlanks").style.display = "block";
+    document.getElementById("topWord").style.display = "none";
+    inp.disabled = hasGuessedCorrect;
+    inp.placeholder = hasGuessedCorrect ? "You guessed it! 🎉" : "Type your guess...";
+    syncHints(g.wordHints || "");
   }
 
-  // Phase: round_end
-  if(g.phase==="round_end" && lastPhase!=="round_end"){
-    lastPhase="round_end";
-    roundActive=false;
-    clearInterval(timerInterval);
-    showRoundResult(g);
-  }
+  const startedAt = g.startedAt || Date.now();
+  const drawTime  = g.settings ? g.settings.drawTime : 60;
+  startTimer(startedAt, drawTime);
+  switchTab("chat");
+}
 
-  // Phase: game_over
-  if(g.phase==="game_over" && lastPhase!=="game_over"){
-    lastPhase="game_over";
-    clearInterval(timerInterval);
-    showGameOver(g);
-  }
+// ── PHASE: ROUND_END
+function handleRoundEnd(g) {
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
+  roundActive = false;
 
-  // Sync score display
-  if(g.scores) {
-    scores=g.scores;
-    renderScores();
-  }
+  // Reveal word to everyone
+  const revealedWord = g.revealWord || g.word || "?";
+  document.getElementById("topWord").textContent = revealedWord;
+  document.getElementById("topWord").style.display = "block";
+  document.getElementById("topBlanks").style.display = "none";
+
+  // Show result overlay
+  document.getElementById("resultTitle").textContent = "Round Over! 🎨";
+  document.getElementById("resultWord").textContent = `The word was: ${revealedWord}`;
+
+  const scoresCont = document.getElementById("resultScores");
+  scoresCont.innerHTML = "";
+  const s = g.scores || {};
+  playersRef.once("value").then(snap => {
+    const players = snap.val() || {};
+    Object.entries(s).sort((a, b) => b[1] - a[1]).slice(0, 6).forEach(([id, pts]) => {
+      const p = players[id];
+      if (!p) return;
+      const row = document.createElement("div");
+      row.className = "result-score-row";
+      row.innerHTML = `
+        <span style="font-size:20px">${p.avatar || "👤"}</span>
+        <span style="font-weight:700;flex:1">${escHtml(p.name)}</span>
+        <span class="pts">${pts} pts</span>
+      `;
+      scoresCont.appendChild(row);
+    });
+  });
+
+  showOverlay("resultOverlay");
+
+  // Countdown display
+  let cd = 5;
+  document.getElementById("countdown").textContent = cd;
+  const cdInt = setInterval(() => {
+    cd--;
+    document.getElementById("countdown").textContent = cd;
+    if (cd <= 0) { clearInterval(cdInt); hideOverlay("resultOverlay"); }
+  }, 1000);
+}
+
+// ── PHASE: GAME_OVER
+function handleGameOver(g) {
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
+  roundActive = false;
+  hideOverlay("resultOverlay");
+
+  const s = g.scores || {};
+  let winner = "", winPts = -1;
+  Object.entries(s).forEach(([id, pts]) => { if (pts > winPts) { winPts = pts; winner = id; } });
+
+  playersRef.once("value").then(snap => {
+    const players = snap.val() || {};
+    const wp = players[winner];
+    document.getElementById("winnerName").textContent = wp ? `${wp.avatar} ${wp.name}` : "Everyone!";
+
+    const fc = document.getElementById("finalScores");
+    fc.innerHTML = "";
+    Object.entries(s).sort((a, b) => b[1] - a[1]).forEach(([id, pts], i) => {
+      const p = players[id];
+      if (!p) return;
+      const medals = ["🥇", "🥈", "🥉"];
+      const row = document.createElement("div");
+      row.className = "result-score-row";
+      row.innerHTML = `
+        <span style="font-size:18px">${medals[i] || (i+1)+"."}</span>
+        <span style="font-size:20px">${p.avatar || "👤"}</span>
+        <span style="font-weight:700;flex:1">${escHtml(p.name)}</span>
+        <span class="pts">${pts}</span>
+      `;
+      fc.appendChild(row);
+    });
+  });
+  burst(); burst();
+  showOverlay("gameOverOverlay");
+}
+
+// ══════════════════════════════════════════════════════════════
+// HINT SYSTEM (skribbl.io style — reveals letters progressively)
+// ══════════════════════════════════════════════════════════════
+function scheduleHints(word, drawTime, startedAt) {
+  clearInterval(hintInterval);
+  if (!word || !isHost) return;
+
+  // Reveal up to 40% of non-space letters
+  const wordChars = word.split("");
+  const revealableIndices = wordChars
+    .map((c, i) => c !== " " ? i : -1)
+    .filter(i => i >= 0);
+  const maxHints = Math.floor(revealableIndices.length * 0.4);
+  let hintsGiven = 0;
+  const revealed = new Set();
+
+  // Reveal a letter at 33% and 66% of the draw time
+  const hintTimes = [
+    Math.floor(drawTime * 0.33) * 1000,
+    Math.floor(drawTime * 0.66) * 1000
+  ];
+
+  hintTimes.forEach(delay => {
+    setTimeout(() => {
+      if (!roundActive || hintsGiven >= maxHints) return;
+      // Pick a random unrevealed letter
+      const unrevealed = revealableIndices.filter(i => !revealed.has(i));
+      if (!unrevealed.length) return;
+      const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+      revealed.add(pick);
+      hintsGiven++;
+      // Build hint string: revealed chars shown, others as _
+      const hintStr = wordChars.map((c, i) => {
+        if (c === " ") return " ";
+        return revealed.has(i) ? c : "_";
+      }).join(" ");
+      gameRef.update({ wordHints: hintStr });
+    }, delay);
+  });
+}
+
+function syncHints(hintStr) {
+  if (!hintStr || amDrawing) return;
+  // Show hints in the blanks display
+  document.getElementById("topBlanks").textContent = hintStr;
 }
 
 // ══════════════════════════════════════════════════════════════
 // WORD SYSTEM
 // ══════════════════════════════════════════════════════════════
-function getWordChoices(diff){
-  let pool=[];
-  if(diff==="easy"||diff==="mixed") pool=[...pool,...WORDS.easy];
-  if(diff==="medium"||diff==="mixed") pool=[...pool,...WORDS.medium];
-  if(diff==="hard"||diff==="mixed") pool=[...pool,...WORDS.hard];
-  const shuffled=pool.sort(()=>Math.random()-0.5);
-  // One of each difficulty if mixed
-  if(diff==="mixed"){
-    return[
-      WORDS.easy[Math.floor(Math.random()*WORDS.easy.length)],
-      WORDS.medium[Math.floor(Math.random()*WORDS.medium.length)],
-      WORDS.hard[Math.floor(Math.random()*WORDS.hard.length)]
-    ];
+function getWordChoices(diff, used) {
+  let pool = [];
+  if (diff === "easy"   || diff === "mixed") pool = [...pool, ...WORDS.easy];
+  if (diff === "medium" || diff === "mixed") pool = [...pool, ...WORDS.medium];
+  if (diff === "hard"   || diff === "mixed") pool = [...pool, ...WORDS.hard];
+
+  // Filter out used words
+  const available = pool.filter(w => !used.includes(w));
+  const src = available.length >= 3 ? available : pool; // fallback if all used
+
+  if (diff === "mixed") {
+    const pick = (arr) => {
+      const a = arr.filter(w => !used.includes(w));
+      const s = a.length ? a : arr;
+      return s[Math.floor(Math.random() * s.length)];
+    };
+    return [pick(WORDS.easy), pick(WORDS.medium), pick(WORDS.hard)];
   }
-  return shuffled.slice(0,3);
+  const shuffled = src.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3);
 }
 
-function showWordOverlay(choices){
-  const cont=document.getElementById("wordChoices");
-  cont.innerHTML="";
-  const diffs=["easy","medium","hard"];
-  choices.forEach((w,i)=>{
-    const btn=document.createElement("button");
-    btn.className="word-choice";
-    btn.innerHTML=`${escHtml(w)} <span class="diff-tag ${diffs[i]+"-tag"}">${diffs[i]}</span>`;
-    btn.onclick=()=>selectWord(w);
+function showWordOverlay(choices) {
+  const cont = document.getElementById("wordChoices");
+  cont.innerHTML = "";
+  const diffs = ["easy", "medium", "hard"];
+  choices.forEach((w, i) => {
+    const btn = document.createElement("button");
+    btn.className = "word-choice";
+    btn.innerHTML = `${escHtml(w)} <span class="diff-tag ${diffs[i]}-tag">${diffs[i]}</span>`;
+    btn.onclick = () => selectWord(w);
     cont.appendChild(btn);
   });
   showOverlay("wordOverlay");
 
-  // Auto-pick after 10s
+  // Auto-pick first word after 10s if drawer doesn't pick
   clearTimeout(wordChoiceTimeout);
-  wordChoiceTimeout=setTimeout(()=>{
-    if(amDrawing) selectWord(choices[0]);
-  },10000);
+  wordChoiceTimeout = setTimeout(() => {
+    if (amDrawing && choices.length) selectWord(choices[0]);
+  }, 10000);
 }
 
-function selectWord(word){
+function selectWord(word) {
   clearTimeout(wordChoiceTimeout);
   hideOverlay("wordOverlay");
-  currentWord=word;
+  currentWord = word;
 
-  // Create blanks
-  const blanks=word.split("").map(c=>c===" "?" ":"_").join(" ");
+  const blanks = word.split(" ").map(w => w.split("").map(()=>"_").join(" ")).join("   ");
+
+  // Track used word
+  const newUsed = [...usedWords, word];
 
   gameRef.update({
-    word:word,
-    wordBlanks:blanks,
-    phase:"drawing",
-    startedAt:firebase.database.ServerValue.TIMESTAMP,
-    correctGuessers:[]
+    word, wordBlanks: blanks, wordHints: blanks,
+    phase: "drawing",
+    startedAt: firebase.database.ServerValue.TIMESTAMP,
+    correctGuessers: [], usedWords: newUsed
   });
   strokesRef.remove();
 }
@@ -1098,157 +1261,170 @@ function selectWord(word){
 // ══════════════════════════════════════════════════════════════
 // CANVAS DRAWING
 // ══════════════════════════════════════════════════════════════
-function initCanvas(){
-  canvas=document.getElementById("gc");
-  const area=document.getElementById("canvasArea");
-  function resize(){
-    const w=area.clientWidth, h=area.clientHeight;
-    const imgData=canvas.width>0?ctx?.getImageData(0,0,canvas.width,canvas.height):null;
-    canvas.width=w; canvas.height=h;
-    ctx=canvas.getContext("2d");
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,w,h);
-    ctx.lineCap="round";ctx.lineJoin="round";
-    if(imgData && imgData.width>0) ctx.putImageData(imgData,0,0);
+function initCanvas() {
+  canvas = document.getElementById("gc");
+  const area = document.getElementById("canvasArea");
+
+  function resize() {
+    const w = area.clientWidth, h = area.clientHeight;
+    if (canvas.width === w && canvas.height === h) return; // no-op if same size
+    // Save current drawing
+    let saved = null;
+    if (ctx && canvas.width > 0 && canvas.height > 0) {
+      try { saved = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch(e) {}
+    }
+    canvas.width  = w;
+    canvas.height = h;
+    ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (saved) {
+      try { ctx.putImageData(saved, 0, 0); } catch(e) {}
+    }
   }
+
   resize();
-  window.addEventListener("resize",resize);
+  // Debounce resize to avoid mid-draw wipes
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 300);
+  });
 
-  canvas.addEventListener("mousedown",startDraw);
-  canvas.addEventListener("mousemove",onDraw);
-  canvas.addEventListener("mouseup",endDraw);
-  canvas.addEventListener("mouseleave",endDraw);
-  canvas.addEventListener("touchstart",startDraw,{passive:false});
-  canvas.addEventListener("touchmove",onDraw,{passive:false});
-  canvas.addEventListener("touchend",endDraw);
+  // Remove old listeners before adding new (prevents duplicates on re-enter)
+  const newCanvas = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(newCanvas, canvas);
+  canvas = newCanvas;
+  ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+  canvas.addEventListener("mousedown",  startDraw);
+  canvas.addEventListener("mousemove",  onDraw);
+  canvas.addEventListener("mouseup",    endDraw);
+  canvas.addEventListener("mouseleave", endDraw);
+  canvas.addEventListener("touchstart", startDraw, { passive: false });
+  canvas.addEventListener("touchmove",  onDraw,    { passive: false });
+  canvas.addEventListener("touchend",   endDraw);
 }
 
-function getPos(e){
-  const rect=canvas.getBoundingClientRect();
-  const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
-  if(e.touches){
-    return{x:(e.touches[0].clientX-rect.left)*sx,y:(e.touches[0].clientY-rect.top)*sy};
-  }
-  return{x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy};
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+  if (e.touches) return { x: (e.touches[0].clientX - rect.left) * sx, y: (e.touches[0].clientY - rect.top) * sy };
+  return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
 }
 
-function startDraw(e){
-  if(!amDrawing) return;
+function startDraw(e) {
+  if (!amDrawing) return;
   e.preventDefault();
-  drawing=true;
-  const p=getPos(e);
-  lastX=p.x; lastY=p.y;
-  currentStroke=[{x:lastX,y:lastY}];
-  ctx.beginPath();ctx.moveTo(lastX,lastY);
+  drawing = true;
+  const p = getPos(e);
+  lastX = p.x; lastY = p.y;
+  currentStroke = [{ x: lastX, y: lastY }];
+  ctx.beginPath(); ctx.moveTo(lastX, lastY);
 }
 
-function onDraw(e){
-  if(!amDrawing||!drawing) return;
+function onDraw(e) {
+  if (!amDrawing || !drawing) return;
   e.preventDefault();
-  const p=getPos(e);
-  applyBrush(lastX,lastY,p.x,p.y);
-  currentStroke.push({x:p.x,y:p.y});
-  lastX=p.x; lastY=p.y;
-}
-
-function applyBrush(x1,y1,x2,y2){
-  ctx.globalCompositeOperation=tool==="eraser"?"destination-out":"source-over";
-  ctx.strokeStyle=tool==="eraser"?"rgba(0,0,0,1)":brushColor;
-  ctx.lineWidth=tool==="eraser"?brushSize*4:brushSize;
-  ctx.lineTo(x2,y2);
+  const p = getPos(e);
+  ctx.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
+  ctx.strokeStyle = tool === "eraser" ? "rgba(0,0,0,1)" : brushColor;
+  ctx.lineWidth   = tool === "eraser" ? brushSize * 4 : brushSize;
+  ctx.lineTo(p.x, p.y);
   ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  currentStroke.push({ x: p.x, y: p.y });
+  lastX = p.x; lastY = p.y;
 }
 
-function endDraw(){
-  if(!amDrawing||!drawing) return;
-  drawing=false;
-  if(currentStroke.length>1){
-    const s={
-      points:currentStroke,color:brushColor,size:brushSize,
-      tool:tool,ts:Date.now()
-    };
+function endDraw() {
+  if (!amDrawing || !drawing) return;
+  drawing = false;
+  ctx.beginPath();
+  if (currentStroke.length > 1) {
+    const s = { points: currentStroke, color: brushColor, size: brushSize, tool, ts: Date.now() };
     strokes.push(s);
-    // Flush to Firebase
     strokesRef.push(s);
-    currentStroke=[];
+    currentStroke = [];
   }
-  ctx.beginPath();
 }
 
-function drawRemoteStroke(s){
-  if(!ctx||!s.points||s.points.length<2) return;
-  ctx.globalCompositeOperation=s.tool==="eraser"?"destination-out":"source-over";
-  ctx.strokeStyle=s.tool==="eraser"?"rgba(0,0,0,1)":s.color;
-  ctx.lineWidth=s.tool==="eraser"?s.size*4:s.size;
-  ctx.lineCap="round";ctx.lineJoin="round";
+function drawRemoteStroke(s) {
+  if (!ctx || !s.points || s.points.length < 2) return;
+  ctx.globalCompositeOperation = s.tool === "eraser" ? "destination-out" : "source-over";
+  ctx.strokeStyle = s.tool === "eraser" ? "rgba(0,0,0,1)" : s.color;
+  ctx.lineWidth   = s.tool === "eraser" ? s.size * 4 : s.size;
+  ctx.lineCap     = "round"; ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(s.points[0].x,s.points[0].y);
-  s.points.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.moveTo(s.points[0].x, s.points[0].y);
+  s.points.forEach(p => ctx.lineTo(p.x, p.y));
   ctx.stroke();
-  ctx.globalCompositeOperation="source-over";
+  ctx.globalCompositeOperation = "source-over";
 }
 
-function clearDraw(){
-  if(!amDrawing) return;
+function clearCanvasLocal() {
+  if (!canvas || !ctx) return;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function clearDraw() {
+  if (!amDrawing) return;
   clearCanvasLocal();
   strokesRef.remove();
-  strokes=[];
+  strokes = [];
 }
 
-function clearCanvasLocal(){
-  if(!canvas||!ctx) return;
-  ctx.fillStyle="#ffffff";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-}
-
-function undoDraw(){
-  if(!amDrawing||!strokes.length) return;
+function undoDraw() {
+  if (!amDrawing || !strokes.length) return;
   strokes.pop();
-  // Remove all from Firebase and re-push remaining strokes
-  // The value listener on guessers' side will auto-redraw
-  strokesRef.remove().then(()=>{
-    strokes.forEach(s=>strokesRef.push(s));
-  });
-  // Redraw locally too
   clearCanvasLocal();
-  strokes.forEach(s=>drawRemoteStroke(s));
+  strokes.forEach(s => drawRemoteStroke(s));
+  strokesRef.remove().then(() => {
+    strokes.forEach(s => strokesRef.push(s));
+  });
 }
 
-function fillBucket(){
-  if(!amDrawing) return;
-  ctx.fillStyle=brushColor;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  strokesRef.push({fill:brushColor,ts:Date.now()});
+function fillBucket() {
+  if (!amDrawing) return;
+  ctx.fillStyle = brushColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  strokesRef.push({ fill: brushColor, ts: Date.now() });
 }
 
 // ══════════════════════════════════════════════════════════════
 // TOOLBAR
 // ══════════════════════════════════════════════════════════════
-function setTool(t){
-  tool=t;
-  document.getElementById("tbPen").classList.toggle("active",t==="pen");
-  document.getElementById("tbErase").classList.toggle("active",t==="eraser");
+function setTool(t) {
+  tool = t;
+  document.getElementById("tbPen").classList.toggle("active", t === "pen");
+  document.getElementById("tbErase").classList.toggle("active", t === "eraser");
 }
-function setBrushSize(v){
-  brushSize=parseInt(v);
-  const px=Math.max(8,Math.min(brushSize*1.5,36));
-  const prev=document.getElementById("szPreview");
-  prev.style.width=px+"px";prev.style.height=px+"px";
-  prev.style.background=brushColor;
+
+function setBrushSize(v) {
+  brushSize = parseInt(v);
+  const px  = Math.max(8, Math.min(brushSize * 1.5, 36));
+  const prev = document.getElementById("szPreview");
+  prev.style.width = px + "px"; prev.style.height = px + "px";
+  prev.style.background = brushColor;
 }
-function buildColorPalette(){
-  const row=document.getElementById("colorPalette");
-  row.innerHTML="";
-  COLORS.forEach((c,i)=>{
-    const sw=document.createElement("div");
-    sw.className="cswatch"+(i===0?" active":"");
-    sw.style.cssText=`background:${c};${c==="#ffffff"?"border-color:#666;":""}`;
-    sw.onclick=()=>{
-      brushColor=c;tool="pen";setTool("pen");
-      document.querySelectorAll(".cswatch").forEach(s=>s.classList.remove("active"));
+
+function buildColorPalette() {
+  const row = document.getElementById("colorPalette");
+  row.innerHTML = "";
+  COLORS.forEach((c, i) => {
+    const sw = document.createElement("div");
+    sw.className = "cswatch" + (i === 0 ? " active" : "");
+    sw.style.cssText = `background:${c};${c === "#ffffff" ? "border-color:#666;" : ""}`;
+    sw.onclick = () => {
+      brushColor = c; tool = "pen"; setTool("pen");
+      document.querySelectorAll(".cswatch").forEach(s => s.classList.remove("active"));
       sw.classList.add("active");
-      document.getElementById("szPreview").style.background=c;
+      document.getElementById("szPreview").style.background = c;
     };
     row.appendChild(sw);
   });
@@ -1257,245 +1433,224 @@ function buildColorPalette(){
 // ══════════════════════════════════════════════════════════════
 // TIMER
 // ══════════════════════════════════════════════════════════════
-function startTimer(startedAt,drawTime){
+function startTimer(startedAt, drawTime) {
   clearInterval(timerInterval);
-  const tick=()=>{
-    const elapsed=Math.floor((Date.now()-startedAt)/1000);
-    timeLeft=Math.max(0,drawTime-elapsed);
-    document.getElementById("tNum").textContent=timeLeft;
-    const pct=timeLeft/drawTime;
-    const dash=126;
-    document.getElementById("tFill").style.strokeDashoffset=dash-(dash*pct);
-    if(timeLeft<=10){
-      document.getElementById("tFill").style.stroke="var(--coral)";
-      document.getElementById("tNum").style.color="var(--coral)";
-    } else if(timeLeft<=20){
-      document.getElementById("tFill").style.stroke="var(--gold)";
-      document.getElementById("tNum").style.color="var(--gold)";
+  let timedOut = false;
+
+  const tick = () => {
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    timeLeft = Math.max(0, drawTime - elapsed);
+    document.getElementById("tNum").textContent = timeLeft;
+    const pct = timeLeft / drawTime;
+    document.getElementById("tFill").style.strokeDashoffset = 126 - (126 * pct);
+
+    if (timeLeft <= 10) {
+      document.getElementById("tFill").style.stroke = "var(--coral)";
+      document.getElementById("tNum").style.color   = "var(--coral)";
+    } else if (timeLeft <= 20) {
+      document.getElementById("tFill").style.stroke = "var(--gold)";
+      document.getElementById("tNum").style.color   = "var(--gold)";
     } else {
-      document.getElementById("tFill").style.stroke="var(--mint)";
-      document.getElementById("tNum").style.color="var(--mint)";
+      document.getElementById("tFill").style.stroke = "var(--mint)";
+      document.getElementById("tNum").style.color   = "var(--mint)";
     }
-    if(timeLeft<=0){
+
+    if (timeLeft <= 0 && !timedOut) {
+      timedOut = true;
       clearInterval(timerInterval);
-      if(isHost) endRound(false);
+      // Any player can trigger endRound — Firebase transaction prevents double-fire
+      endRound(false);
     }
   };
   tick();
-  timerInterval=setInterval(tick,500);
+  timerInterval = setInterval(tick, 500);
 }
 
 // ══════════════════════════════════════════════════════════════
 // CHAT / GUESSING
 // ══════════════════════════════════════════════════════════════
-function sendGuess(){
-  const inp=document.getElementById("chatInput");
-  const text=inp.value.trim();
-  if(!text) return;
-  inp.value="";
+function sendGuess() {
+  const inp  = document.getElementById("chatInput");
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value  = "";
 
-  // Check if correct
-  const isCorrect=roundActive && !amDrawing && !hasGuessedCorrect &&
-    text.toLowerCase()===currentWord.toLowerCase();
+  // Drawer can't guess
+  if (amDrawing) return;
+  // Already guessed
+  if (hasGuessedCorrect) return;
+  // Not in an active round
+  if (!roundActive) return;
 
-  if(isCorrect){
-    hasGuessedCorrect=true;
-    const elapsed=Math.floor((timeLeft/gameSettings.drawTime)*100);
-    const pts=Math.max(50,elapsed);
+  // Always read word from Firebase to avoid local state issues
+  gameRef.once("value").then(snap => {
+    const g = snap.val() || {};
+    if (g.phase !== "drawing") return; // round ended already
+    const actualWord = (g.word || "").toLowerCase().trim();
+    const guess      = text.toLowerCase().trim();
 
-    chatRef.push({
-      type:"correct",uid:myId,name:myName,text:text,ts:Date.now()
-    });
+    if (!actualWord) {
+      chatRef.push({ type: "normal", uid: myId, name: myName, text, ts: Date.now() });
+      return;
+    }
 
-    // Update correctGuessers in Firebase
-    gameRef.once("value").then(snap=>{
-      const g=snap.val()||{};
-      const cg=g.correctGuessers||[];
-      if(!cg.includes(myId)){
+    const isCorrect = guess === actualWord;
+    const isClose   = !isCorrect && levenshtein(guess, actualWord) <= 2;
+
+    if (isCorrect) {
+      hasGuessedCorrect = true;
+      // Points: scale from 100 (instant) to 50 (last second)
+      const dt  = g.settings ? g.settings.drawTime : 60;
+      const pts = Math.max(50, Math.round((timeLeft / dt) * 100));
+
+      chatRef.push({ type: "correct", uid: myId, name: myName, text, ts: Date.now() });
+
+      // Atomic update via transaction to avoid race conditions
+      gameRef.transaction(current => {
+        if (!current) return current;
+        if (current.phase !== "drawing") return; // abort if round ended
+        const cg = current.correctGuessers || [];
+        if (cg.includes(myId)) return; // already recorded
         cg.push(myId);
-        const newScores=g.scores||{};
-        newScores[myId]=(newScores[myId]||0)+pts;
-        // Drawer also gets points
-        newScores[currentDrawer]=(newScores[currentDrawer]||0)+Math.floor(pts*0.5);
-
-        gameRef.update({correctGuessers:cg,scores:newScores});
-
-        // Check if all guessed
-        playersRef.once("value").then(psnap=>{
-          const players=psnap.val()||{};
-          const total=Object.keys(players).filter(id=>players[id]&&players[id].online!==false&&id!==currentDrawer).length;
-          if(cg.length>=total && isHost){
-            setTimeout(()=>endRound(true),1000);
+        const s = current.scores || {};
+        s[myId] = (s[myId] || 0) + pts;
+        s[currentDrawer] = (s[currentDrawer] || 0) + Math.floor(pts * 0.5);
+        current.correctGuessers = cg;
+        current.scores = s;
+        return current;
+      }).then(result => {
+        if (!result.committed) return;
+        // Check if all guessers have guessed
+        playersRef.once("value").then(psnap => {
+          const players = psnap.val() || {};
+          const total = Object.keys(players)
+            .filter(id => players[id] && players[id].online !== false && id !== currentDrawer).length;
+          const g2 = result.snapshot.val();
+          const cg2 = g2 ? (g2.correctGuessers || []) : [];
+          if (cg2.length >= total) {
+            setTimeout(() => endRound(true), 1000);
           }
         });
-      }
-    });
-    burst();
-    document.getElementById("chatInput").disabled=true;
-    document.getElementById("chatInput").placeholder="You guessed it! 🎉";
-  } else {
-    // Check if close
-    const isClose=!amDrawing && currentWord &&
-      levenshtein(text.toLowerCase(),currentWord.toLowerCase())<=2;
-
-    chatRef.push({
-      type:isClose?"close":"normal",uid:myId,name:myName,text:text,ts:Date.now()
-    });
-  }
-}
-
-function appendChat(msg){
-  const log=document.getElementById("chatLog");
-  const div=document.createElement("div");
-  div.className="chat-msg";
-
-  if(msg.type==="system"){
-    div.className+=" system";
-    div.textContent=msg.text;
-  } else if(msg.type==="correct"){
-    div.className+=" correct";
-    div.innerHTML=`<span class="cm-name">${escHtml(msg.name)}</span>guessed it! 🎉`;
-    showNotif(`🎉 ${msg.name} got it right!`,"correct");
-  } else if(msg.type==="close"){
-    div.className+=" close";
-    div.innerHTML=`<span class="cm-name">${escHtml(msg.name)}:</span>${escHtml(msg.text)} <em>(close!)</em>`;
-  } else {
-    div.innerHTML=`<span class="cm-name">${escHtml(msg.name)}:</span>${escHtml(msg.text)}`;
-  }
-
-  log.appendChild(div);
-  log.scrollTop=log.scrollHeight;
-}
-
-// ══════════════════════════════════════════════════════════════
-// ROUND END
-// ══════════════════════════════════════════════════════════════
-function endRound(allGuessed){
-  if(!isHost) return;
-  clearInterval(timerInterval);
-
-  gameRef.once("value").then(snap=>{
-    const g=snap.val()||{};
-    const nr=g.round||1;
-    const total=g.settings?g.settings.rounds:totalRounds;
-
-    if(nr>=total){
-      gameRef.update({phase:"game_over",word:g.word});
-    } else {
-      // Next round: pick new random drawer (not same as current)
-      playersRef.once("value").then(psnap=>{
-        const players=psnap.val()||{};
-        const ids=Object.keys(players).filter(id=>players[id]&&players[id].online!==false);
-        let nextDrawer;
-        do { nextDrawer=ids[Math.floor(Math.random()*ids.length)]; }
-        while(nextDrawer===currentDrawer && ids.length>1);
-
-        const choices=getWordChoices(g.settings?g.settings.difficulty:"mixed");
-
-        gameRef.update({
-          phase:"round_end",
-          revealWord:g.word,
-          nextDrawer:nextDrawer,
-          nextWordChoices:choices,
-          round:nr
-        });
-
-        // Auto-advance after 5s
-        setTimeout(()=>{
-          gameRef.update({
-            phase:"picking",
-            drawer:nextDrawer,
-            wordChoices:choices,
-            word:"",
-            wordBlanks:"",
-            correctGuessers:[],
-            round:nr+1,
-            startedAt:0
-          });
-        },6000);
       });
+
+      burst();
+      inp.disabled = true;
+      inp.placeholder = "You guessed it! 🎉";
+    } else {
+      chatRef.push({ type: isClose ? "close" : "normal", uid: myId, name: myName, text, ts: Date.now() });
     }
   });
 }
 
-function showRoundResult(g){
-  document.getElementById("resultTitle").textContent="Round Over! 🎨";
-  document.getElementById("resultWord").textContent=`The word was: ${g.revealWord||g.word||"?"}`;
-  lastPhase="round_end";
+function appendChat(msg) {
+  const log = document.getElementById("chatLog");
+  const div = document.createElement("div");
+  div.className = "chat-msg";
 
-  // Show scores
-  const scoresCont=document.getElementById("resultScores");
-  scoresCont.innerHTML="";
-  const s=g.scores||{};
-  playersRef.once("value").then(snap=>{
-    const players=snap.val()||{};
-    Object.entries(s).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(([id,pts])=>{
-      const p=players[id];
-      if(!p) return;
-      const row=document.createElement("div");
-      row.className="result-score-row";
-      row.innerHTML=`
-        <span style="font-size:20px">${p.avatar||"👤"}</span>
-        <span style="font-weight:700">${escHtml(p.name)}</span>
-        <span class="pts">${pts} pts</span>
-      `;
-      scoresCont.appendChild(row);
-    });
-  });
+  if (msg.type === "system") {
+    div.className += " system";
+    div.textContent = msg.text;
+  } else if (msg.type === "correct") {
+    div.className += " correct";
+    div.innerHTML = `<span class="cm-name">${escHtml(msg.name)}</span>guessed it! 🎉`;
+    showNotif(`🎉 ${msg.name} got it right!`, "correct");
+  } else if (msg.type === "close") {
+    div.className += " close";
+    div.innerHTML = `<span class="cm-name">${escHtml(msg.name)}:</span> ${escHtml(msg.text)} <em style="opacity:0.7">(so close!)</em>`;
+  } else {
+    div.innerHTML = `<span class="cm-name">${escHtml(msg.name)}:</span> ${escHtml(msg.text)}`;
+  }
 
-  showOverlay("resultOverlay");
-  // Countdown
-  let cd=5;
-  document.getElementById("countdown").textContent=cd;
-  const cdInt=setInterval(()=>{
-    cd--;
-    document.getElementById("countdown").textContent=cd;
-    if(cd<=0){ clearInterval(cdInt); hideOverlay("resultOverlay"); }
-  },1000);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
 }
 
-function showGameOver(g){
-  const s=g.scores||{};
-  let winner="",winPts=0;
-  Object.entries(s).forEach(([id,pts])=>{
-    if(pts>winPts){winPts=pts;winner=id;}
-  });
+// ══════════════════════════════════════════════════════════════
+// ROUND END — any player can call this; transaction prevents double
+// ══════════════════════════════════════════════════════════════
+function endRound(allGuessed) {
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
 
-  playersRef.once("value").then(snap=>{
-    const players=snap.val()||{};
-    const wp=players[winner];
-    document.getElementById("winnerName").textContent=wp?`${wp.avatar} ${wp.name}`:"Everyone!";
+  // Use a Firebase transaction so only the first caller wins
+  gameRef.transaction(current => {
+    if (!current) return current;
+    // Only proceed if we are in the "drawing" phase — abort for everything else
+    if (current.phase !== "drawing") return; // undefined = abort transaction
+    const nr    = current.round || 1;
+    const total = current.settings ? current.settings.rounds : totalRounds;
 
-    const fc=document.getElementById("finalScores");
-    fc.innerHTML="";
-    Object.entries(s).sort((a,b)=>b[1]-a[1]).forEach(([id,pts])=>{
-      const p=players[id];
-      if(!p) return;
-      const row=document.createElement("div");
-      row.className="result-score-row";
-      row.innerHTML=`<span>${p.avatar||"👤"}</span><span style="font-weight:700">${escHtml(p.name)}</span><span class="pts">${pts}</span>`;
-      fc.appendChild(row);
-    });
+    if (nr >= total) {
+      current.phase = "game_over";
+    } else {
+      current.phase      = "round_end";
+      current.revealWord = current.word;
+    }
+    return current;
+  }).then(result => {
+    if (!result.committed || !isHost) return;
+    const g = result.snapshot.val();
+    if (!g) return;
+
+    if (g.phase === "game_over") return; // game over handled by listener
+
+    // Host schedules next round after 6s
+    setTimeout(() => {
+      playersRef.once("value").then(psnap => {
+        const players = psnap.val() || {};
+        const ids = Object.keys(players).filter(id => players[id] && players[id].online !== false);
+        if (!ids.length) return;
+        // Random drawer, not same as last
+        let nextDrawer;
+        let tries = 0;
+        do {
+          nextDrawer = ids[Math.floor(Math.random() * ids.length)];
+          tries++;
+        } while (nextDrawer === currentDrawer && ids.length > 1 && tries < 20);
+
+        const diff    = g.settings ? g.settings.difficulty : "mixed";
+        const choices = getWordChoices(diff, g.usedWords || []);
+
+        gameRef.update({
+          phase: "picking",
+          drawer: nextDrawer,
+          wordChoices: choices,
+          word: "", wordBlanks: "", wordHints: "",
+          correctGuessers: [],
+          round: (g.round || 1) + 1,
+          startedAt: 0
+        });
+      });
+    }, 6000);
   });
-  burst();burst();
-  showOverlay("gameOverOverlay");
 }
 
-function renderScores(){
-  const list=document.getElementById("scoreList");
-  list.innerHTML="";
-  playersRef.once("value").then(snap=>{
-    const players=snap.val()||{};
-    const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-    sorted.forEach(([id,pts],i)=>{
-      const p=players[id];
-      if(!p||p.online===false) return;
-      const item=document.createElement("div");
-      item.className="score-item"+(id===currentDrawer?" drawing":"");
-      item.innerHTML=`
-        <div class="s-rank">${i+1}</div>
-        <div class="s-avatar" style="background:${p.avatarColor||"#444"}">${p.avatar||"👤"}</div>
-        <div class="s-name">${escHtml(p.name)}${id===currentDrawer?" 🖌️":""}</div>
+// ══════════════════════════════════════════════════════════════
+// SCORES PANEL — shows guessed status
+// ══════════════════════════════════════════════════════════════
+function renderScores(g) {
+  const list = document.getElementById("scoreList");
+  list.innerHTML = "";
+  const s   = (g && g.scores) ? g.scores : scores;
+  const cg  = (g && g.correctGuessers) ? g.correctGuessers : [];
+
+  playersRef.once("value").then(snap => {
+    const players = snap.val() || {};
+    const sorted  = Object.entries(players)
+      .filter(([id, p]) => p && p.online !== false)
+      .sort(([a], [b]) => (s[b] || 0) - (s[a] || 0));
+
+    sorted.forEach(([id, p], i) => {
+      const pts      = s[id] || 0;
+      const isDrawer = id === currentDrawer;
+      const guessed  = cg.includes(id);
+      const item     = document.createElement("div");
+      item.className = "score-item" + (isDrawer ? " drawing" : "");
+      let statusIcon = isDrawer ? "🖌️" : (guessed ? "✅" : "");
+      item.innerHTML = `
+        <div class="s-rank">${i + 1}</div>
+        <div class="s-avatar" style="background:${p.avatarColor || "#444"}">${p.avatar || "👤"}</div>
+        <div class="s-name">${escHtml(p.name)} ${statusIcon}</div>
         <div class="s-pts">${pts}</div>
       `;
       list.appendChild(item);
@@ -1506,146 +1661,135 @@ function renderScores(){
 // ══════════════════════════════════════════════════════════════
 // AGORA AUDIO
 // ══════════════════════════════════════════════════════════════
-async function joinAudio(){
+async function joinAudio() {
   try {
-    agoraClient=AgoraRTC.createClient({mode:"rtc",codec:"vp8"});
-    AgoraRTC.setLogLevel(3);
+    agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    AgoraRTC.setLogLevel(4); // errors only
 
-    agoraClient.on("user-published",async(user,mediaType)=>{
-      await agoraClient.subscribe(user,mediaType);
-      if(mediaType==="audio"){
-        user.audioTrack.play();
-        speakingUsers[user.uid]=user;
-        renderSpeakers();
-      }
+    agoraClient.on("user-published", async (user, mediaType) => {
+      await agoraClient.subscribe(user, mediaType);
+      if (mediaType === "audio") user.audioTrack.play();
     });
-    agoraClient.on("user-unpublished",(user)=>{
-      delete speakingUsers[user.uid];
-      renderSpeakers();
-    });
-    agoraClient.on("user-left",(user)=>{
-      delete speakingUsers[user.uid];
-      renderSpeakers();
-    });
+    agoraClient.on("exception", e => console.warn("Agora:", e));
 
-    // Use roomCode as channel, myId as uid hash
-    const uidNum=Math.abs(hashCode(myId))%100000000;
-    await agoraClient.join(AGORA_APP_ID,roomCode,null,uidNum);
-    document.getElementById("audioStatus").textContent="Audio joined ✓";
-  } catch(e){
-    console.warn("Agora error:",e);
-    document.getElementById("audioStatus").textContent="Audio unavailable";
+    const uidNum = Math.abs(hashCode(myId)) % 100000000;
+    await agoraClient.join(AGORA_APP_ID, roomCode, null, uidNum);
+    document.getElementById("audioStatus").textContent = "🔊 Audio ready";
+  } catch (e) {
+    console.warn("Agora join failed:", e);
+    document.getElementById("audioStatus").textContent = "Audio unavailable";
   }
 }
 
-async function toggleMic(){
-  const btn=document.getElementById("micBtn");
-  if(!agoraClient){
-    showToast("Audio not connected yet");
-    return;
-  }
+async function toggleMic() {
+  const btn = document.getElementById("micBtn");
+  if (micHasError) return;
+  if (!agoraClient) { showToast("Audio not ready yet"); return; }
+
   try {
-    if(micMuted){
-      if(!localAudioTrack){
-        localAudioTrack=await AgoraRTC.createMicrophoneAudioTrack();
+    if (micMuted) {
+      if (!localAudioTrack) {
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await agoraClient.publish([localAudioTrack]);
       } else {
         await localAudioTrack.setMuted(false);
-        await agoraClient.publish([localAudioTrack]);
       }
-      micMuted=false;
-      btn.textContent="🎙️ Mic On";
-      btn.className="mic-btn";
+      micMuted = false;
+      btn.textContent = "🎙️ Mic On";
+      btn.className   = "mic-btn";
     } else {
-      if(localAudioTrack) await localAudioTrack.setMuted(true);
-      micMuted=true;
-      btn.textContent="🔇 Muted";
-      btn.className="mic-btn muted";
+      if (localAudioTrack) await localAudioTrack.setMuted(true);
+      micMuted = true;
+      btn.textContent = "🔇 Muted";
+      btn.className   = "mic-btn muted";
     }
-  } catch(e){
-    // DEVICE_NOT_FOUND = no mic hardware, show friendly message
-    if(e.code==="DEVICE_NOT_FOUND" || e.message?.includes("DEVICE_NOT_FOUND") || e.message?.includes("NotFoundError")){
-      showToast("No microphone found on this device");
-      btn.textContent="🔇 No Mic";
-      btn.className="mic-btn muted";
-      document.getElementById("audioStatus").textContent="No mic hardware";
-    } else if(e.message?.includes("Permission")||e.message?.includes("NotAllowed")){
+  } catch (e) {
+    if (e.message?.includes("DEVICE_NOT_FOUND") || e.message?.includes("NotFoundError") || e.code === "DEVICE_NOT_FOUND") {
+      micHasError = true;
+      btn.textContent = "🔇 No Mic";
+      btn.className   = "mic-btn muted";
+      document.getElementById("audioStatus").textContent = "No mic found";
+    } else if (e.message?.includes("Permission") || e.message?.includes("NotAllowed")) {
       showToast("Mic permission denied — check browser settings");
     } else {
-      console.warn("Mic error:",e);
+      console.warn("Mic error:", e);
     }
   }
-}
-
-function renderSpeakers(){
-  const list=document.getElementById("speakingList");
-  list.innerHTML="";
-  // Show online players with speaking indicator
-  playersRef.once("value").then(snap=>{
-    const players=snap.val()||{};
-    Object.entries(players).filter(([id,p])=>p&&p.online!==false).forEach(([id,p])=>{
-      const dot=document.createElement("div");
-      dot.className="speaker-dot";
-      dot.style.background=p.avatarColor||"#444";
-      dot.textContent=p.avatar||"👤";
-      dot.title=p.name;
-      list.appendChild(dot);
-    });
-  });
 }
 
 // ══════════════════════════════════════════════════════════════
 // UI HELPERS
 // ══════════════════════════════════════════════════════════════
-function showScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
-function showOverlay(id){ document.getElementById(id).classList.add("show"); }
-function hideOverlay(id){ document.getElementById(id).classList.remove("show"); }
+function showOverlay(id) { document.getElementById(id).classList.add("show"); }
+function hideOverlay(id) { document.getElementById(id).classList.remove("show"); }
 
-function switchTab(tab){
-  document.querySelectorAll(".panel-tab").forEach((t,i)=>{
-    const tabs=["scores","chat"];
-    t.classList.toggle("active",tabs[i]===tab);
+function switchTab(tab) {
+  document.querySelectorAll(".panel-tab").forEach((t, i) => {
+    t.classList.toggle("active", ["scores", "chat"][i] === tab);
   });
-  document.querySelectorAll(".panel-body").forEach(b=>b.classList.remove("active"));
-  document.getElementById("tab-"+tab).classList.add("active");
+  document.querySelectorAll(".panel-body").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
 }
 
-function copyRoomCode(){
-  navigator.clipboard?.writeText(roomCode).then(()=>showToast("Room code copied! 📋"));
+function copyRoomCode() {
+  navigator.clipboard?.writeText(roomCode).then(() => showToast("Room code copied! 📋"));
 }
 
-function backToLobby(){
+function backToLobby() {
   hideOverlay("gameOverOverlay");
-  lastPhase="";lastDrawer="";lastRound=0;
+  gameScreenEntered = false;
+  currentPhase = "";
+  showScreen("lobby");
+}
+
+async function leaveGame() {
+  if (!confirm("Leave the game?")) return;
+  if (playersRef && myId) {
+    await playersRef.child(myId).update({ online: false });
+    chatRef.push({ type: "system", text: `${myName} left the game 👋`, ts: Date.now() });
+  }
+  try {
+    if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
+    if (agoraClient) await agoraClient.leave();
+  } catch (e) { console.warn(e); }
+  clearInterval(timerInterval);
+  clearInterval(hintInterval);
+  gameScreenEntered = false;
+  currentPhase = "";
+  roundActive = false;
+  amDrawing   = false;
+  strokes     = [];
+  scores      = {};
   showScreen("lobby");
 }
 
 let toastT;
-function showToast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;t.classList.add("show");
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
   clearTimeout(toastT);
-  toastT=setTimeout(()=>t.classList.remove("show"),2800);
+  toastT = setTimeout(() => t.classList.remove("show"), 2800);
 }
 
-function showNotif(msg,type){
-  const stack=document.getElementById("notifStack");
-  const n=document.createElement("div");
-  n.className=`notif ${type}`;
-  n.textContent=msg;
+function showNotif(msg, type) {
+  const stack = document.getElementById("notifStack");
+  const n = document.createElement("div");
+  n.className = `notif ${type}`;
+  n.textContent = msg;
   stack.appendChild(n);
-  setTimeout(()=>n.remove(),3600);
+  setTimeout(() => n.remove(), 3600);
 }
 
-function burst(){
-  const colors=["#f0c040","#ff6b6b","#3dd68c","#58a6ff","#bc8cff","#ff922b"];
-  for(let i=0;i<30;i++){
-    const p=document.createElement("div");
-    p.className="cp";
-    p.style.cssText=`
+function burst() {
+  const colors = ["#f0c040", "#ff6b6b", "#3dd68c", "#58a6ff", "#bc8cff", "#ff922b"];
+  for (let i = 0; i < 35; i++) {
+    const p = document.createElement("div");
+    p.className = "cp";
+    p.style.cssText = `
       left:${Math.random()*100}%;
       width:${5+Math.random()*9}px;height:${5+Math.random()*9}px;
       background:${colors[Math.floor(Math.random()*colors.length)]};
@@ -1654,37 +1798,38 @@ function burst(){
       animation-delay:${Math.random()*0.4}s;
     `;
     document.body.appendChild(p);
-    p.addEventListener("animationend",()=>p.remove());
+    p.addEventListener("animationend", () => p.remove());
   }
 }
 
-function escHtml(str){
-  if(!str) return "";
+function escHtml(str) {
+  if (!str) return "";
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function hashCode(s){
-  let h=0;
-  for(let i=0;i<s.length;i++) h=Math.imul(31,h)+s.charCodeAt(i)|0;
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
   return h;
 }
 
-function levenshtein(a,b){
-  const m=a.length,n=b.length;
-  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i?j?0:i:j));
-  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
-    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, (_,i) => Array.from({length:n+1}, (_,j) => i?j?0:i:j));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
   return dp[m][n];
 }
 
-// Keep connection alive
-setInterval(()=>{
-  if(playersRef && myId) playersRef.child(myId+"/lastSeen").set(Date.now());
-},30000);
+// ══════════════════════════════════════════════════════════════
+// KEEPALIVE + CLEANUP
+// ══════════════════════════════════════════════════════════════
+setInterval(() => {
+  if (playersRef && myId) playersRef.child(myId + "/lastSeen").set(Date.now());
+}, 30000);
 
-// Handle page close
-window.addEventListener("beforeunload",()=>{
-  if(playersRef && myId) playersRef.child(myId).update({online:false});
+window.addEventListener("beforeunload", () => {
+  if (playersRef && myId) playersRef.child(myId).update({ online: false });
 });
 </script>
 </body>
