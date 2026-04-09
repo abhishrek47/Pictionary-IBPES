@@ -17,22 +17,30 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  /* Brand palette — matches abhishektrivedi.com */
-  --bg:#1a1a1a;           /* near-black body bg */
-  --surface:#1e3a5f;      /* deep navy — topbar, panels */
-  --card:#162d4a;         /* darker navy — cards, inputs */
+  /* ── Game screen palette (dark navy) ── */
+  --bg:#1a1a1a;
+  --surface:#1e3a5f;
+  --card:#162d4a;
   --border:rgba(255,255,255,0.12);
-  --gold:#f0c040;         /* kept for scores/active states */
-  --coral:#c0392b;        /* terracotta accent */
-  --mint:#3dd68c;         /* correct guess green */
-  --sky:#5b8fd4;          /* blue variant */
-  --lavender:#bc8cff;
+  --gold:#f0c040;
+  --coral:#c0392b;
+  --mint:#3dd68c;
+  --sky:#5b8fd4;
   --orange:#e67e22;
-  --white:#f5f0eb;        /* linen white */
+  --white:#f5f0eb;        /* linen — readable on dark navy */
   --muted:rgba(245,240,235,0.55);
   --canvas-bg:#ffffff;
-  --accent:#c0392b;       /* terracotta */
+  --accent:#c0392b;
   --radius:12px;
+
+  /* ── Lobby palette (light linen) ── */
+  --lobby-bg:#f5f0eb;
+  --lobby-text:#1a1a1a;
+  --lobby-text-muted:#666;
+  --lobby-card-bg:#ffffff;
+  --lobby-card-border:#e0d8d0;
+  --lobby-navy:#1e3a5f;
+  --lobby-terra:#c0392b;
 }
 html,body{height:100%;overflow:hidden;}
 body{
@@ -73,9 +81,9 @@ body{
   line-height:1;margin-bottom:4px;
 }
 .lobby-card{
-  background:#fff;border:1.5px solid #e0d8d0;
+  background:#ffffff;border:1.5px solid #ddd5cc;
   border-radius:16px;padding:24px;margin-bottom:14px;text-align:left;
-  box-shadow:0 2px 16px rgba(30,58,95,0.06);
+  box-shadow:0 2px 16px rgba(30,58,95,0.08);
 }
 .lobby-card h3{
   font-size:11px;text-transform:uppercase;letter-spacing:2.5px;
@@ -83,18 +91,18 @@ body{
   font-family:'DM Sans',sans-serif;
 }
 .field-row{margin-bottom:12px;}
-.field-row label{display:block;font-size:12px;font-weight:700;color:#888;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
+.field-row label{display:block;font-size:12px;font-weight:700;color:#666;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
 input[type=text],input[type=number],select{
   width:100%;padding:12px 14px;
-  background:#f5f0eb;border:1.5px solid #e0d8d0;
+  background:#f5f0eb;border:1.5px solid #ddd5cc;
   border-radius:10px;color:#1a1a1a;
   font-family:'DM Sans','Nunito',sans-serif;font-size:16px;font-weight:600;
   outline:none;transition:border-color 0.2s;
 }
 input:focus,select:focus{border-color:#1e3a5f;}
-select option{background:#fff;}
+select option{background:#fff;color:#1a1a1a;}
 .or-divider{display:flex;align-items:center;gap:12px;margin:14px 0;}
-.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:#e0d8d0;}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:#ddd5cc;}
 .or-divider span{font-size:11px;color:#888;font-weight:700;letter-spacing:1.5px;}
 .btn{
   width:100%;padding:15px;border:none;border-radius:12px;
@@ -104,13 +112,13 @@ select option{background:#fff;}
 }
 .btn-gold{background:#1e3a5f;color:#f5f0eb;}
 .btn-gold:hover{background:#162d4a;}
-.btn-outline{background:transparent;border:2px solid #e0d8d0;color:#1a1a1a;}
+.btn-outline{background:transparent;border:2px solid #ddd5cc;color:#1a1a1a;}
 .btn-outline:hover{border-color:#1e3a5f;color:#1e3a5f;}
 .rules-box{
   background:rgba(30,58,95,0.05);border:1px solid rgba(30,58,95,0.12);
   border-radius:12px;padding:14px 16px;margin-top:14px;
 }
-.rules-box p{font-size:13px;color:#555;line-height:1.7;}
+.rules-box p{font-size:13px;color:#444;line-height:1.7;}
 .rules-box strong{color:#1e3a5f;}
 
 /* ══════════════════════════════════════
@@ -764,31 +772,31 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
     <!-- Live game banner — shown when a game is in progress -->
     <div id="liveGameBanner" style="display:none;margin-bottom:16px;">
       <div style="
-        background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(61,214,140,0.06));
-        border:1.5px solid rgba(61,214,140,0.35);
+        background:linear-gradient(135deg,rgba(30,58,95,0.08),rgba(61,214,140,0.10));
+        border:2px solid rgba(61,214,140,0.5);
         border-radius:14px;padding:16px 18px;
         position:relative;overflow:hidden;
       ">
-        <!-- Pulsing dot -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
           <span style="
             width:8px;height:8px;border-radius:50%;
-            background:var(--mint);flex-shrink:0;
-            box-shadow:0 0 0 0 rgba(61,214,140,0.6);
+            background:#2aa870;flex-shrink:0;
+            box-shadow:0 0 0 0 rgba(42,168,112,0.6);
             animation:livePulse 1.5s ease-in-out infinite;
             display:inline-block;
           "></span>
-          <span style="font-size:11px;font-weight:700;color:var(--mint);text-transform:uppercase;letter-spacing:2px;">Game in Progress</span>
+          <span style="font-size:11px;font-weight:800;color:#1a6644;text-transform:uppercase;letter-spacing:2px;">Game in Progress</span>
         </div>
-        <p style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:4px;" id="liveGameDesc">
+        <p style="font-size:14px;color:#1a1a1a;font-weight:700;margin-bottom:4px;" id="liveGameDesc">
           Your batchmates are playing right now!
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;" id="liveGameMeta"></p>
+        <p style="font-size:12px;color:#555;margin-bottom:14px;" id="liveGameMeta"></p>
         <button onclick="quickJoinLiveGame()" style="
-          width:100%;padding:12px;border:none;border-radius:10px;
-          background:var(--mint);color:#001a0e;
+          width:100%;padding:14px;border:none;border-radius:10px;
+          background:#2aa870;color:#fff;
           font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;
           cursor:pointer;-webkit-tap-highlight-color:transparent;
+          box-shadow:0 3px 12px rgba(42,168,112,0.3);
         ">⚡ Jump In Now</button>
       </div>
     </div>
