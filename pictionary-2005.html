@@ -129,9 +129,17 @@ select option{background:var(--surface);}
 .room-code-display{
   background:var(--card);border:2px solid var(--gold);
   border-radius:14px;padding:20px;text-align:center;margin-bottom:20px;
+  overflow:hidden;
 }
 .room-code-display .label{font-size:11px;text-transform:uppercase;letter-spacing:3px;color:var(--muted);margin-bottom:8px;}
-.room-code-display .code{font-family:'Fredoka One',cursive;font-size:42px;color:var(--gold);letter-spacing:8px;}
+.room-code-display .code{
+  font-family:'Fredoka One',cursive;
+  font-size:clamp(22px,8vw,42px);
+  color:var(--gold);
+  letter-spacing:clamp(2px,1.5vw,8px);
+  word-break:break-all;
+  line-height:1.2;
+}
 .room-code-display .hint{font-size:12px;color:var(--muted);margin-top:6px;}
 .player-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
@@ -474,6 +482,12 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+@keyframes livePulse{
+  0%{box-shadow:0 0 0 0 rgba(61,214,140,0.6);}
+  70%{box-shadow:0 0 0 8px rgba(61,214,140,0);}
+  100%{box-shadow:0 0 0 0 rgba(61,214,140,0);}
+}
 </style>
 </head>
 <body>
@@ -681,6 +695,38 @@ canvas#gc{display:block;width:100%;height:100%;cursor:crosshair;}
       <h1 class="game-title" style="margin-bottom:4px;">Pictionary!</h1>
       <p style="font-family:'Caveat',cursive;font-size:19px;color:rgba(200,168,96,0.9);margin-bottom:2px;">Class of 2005 Reunion</p>
       <p style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">20 years later · still drawing blanks 🎨</p>
+    </div>
+
+    <!-- Live game banner — shown when a game is in progress -->
+    <div id="liveGameBanner" style="display:none;margin-bottom:16px;">
+      <div style="
+        background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(61,214,140,0.06));
+        border:1.5px solid rgba(61,214,140,0.35);
+        border-radius:14px;padding:16px 18px;
+        position:relative;overflow:hidden;
+      ">
+        <!-- Pulsing dot -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="
+            width:8px;height:8px;border-radius:50%;
+            background:var(--mint);flex-shrink:0;
+            box-shadow:0 0 0 0 rgba(61,214,140,0.6);
+            animation:livePulse 1.5s ease-in-out infinite;
+            display:inline-block;
+          "></span>
+          <span style="font-size:11px;font-weight:700;color:var(--mint);text-transform:uppercase;letter-spacing:2px;">Game in Progress</span>
+        </div>
+        <p style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:4px;" id="liveGameDesc">
+          Your batchmates are playing right now!
+        </p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;" id="liveGameMeta"></p>
+        <button onclick="quickJoinLiveGame()" style="
+          width:100%;padding:12px;border:none;border-radius:10px;
+          background:var(--mint);color:#001a0e;
+          font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;
+          cursor:pointer;-webkit-tap-highlight-color:transparent;
+        ">⚡ Jump In Now</button>
+      </div>
     </div>
 
     <div class="lobby-card">
@@ -999,11 +1045,66 @@ let micMuted = true, micHasError = false;
 let strokeListener = null;
 let gameScreenEntered = false;
 
-// ══════════════════════════════════════════════════════════════
-// FIREBASE INIT
-// ══════════════════════════════════════════════════════════════
+// ── LIVE GAME DETECTION — runs on page load ──────────────────────────────────
+// Scans Firebase for any active game and shows a banner if found
+let liveRoomCode = null;
+
+function detectLiveGame() {
+  // Only scan known room codes — scanning all rooms would be expensive
+  // Check the default room code first, plus any recently used ones
+  const roomsToCheck = ["IBPATEL2005"];
+
+  roomsToCheck.forEach(code => {
+    db.ref("rooms/" + code + "/game").once("value").then(snap => {
+      const g = snap.val();
+      if (!g) return;
+      if (g.status !== "playing") return;
+      if (g.phase === "game_over") return;
+
+      // A live game exists — show the banner
+      liveRoomCode = code;
+
+      // Count online players
+      db.ref("rooms/" + code + "/players").once("value").then(psnap => {
+        const players = psnap.val() || {};
+        const online = Object.values(players).filter(p => p && p.online !== false && p.name);
+        const count = online.length;
+        const names = online.slice(0, 3).map(p => p.name.split(" ")[0]).join(", ");
+        const more = count > 3 ? ` +${count - 3} more` : "";
+
+        document.getElementById("liveGameMeta").textContent =
+          `${count} player${count !== 1 ? "s" : ""} in room · ${names}${more}`;
+        document.getElementById("liveGameDesc").textContent =
+          count >= 2 ? "Your batchmates are playing right now!" : "A game is waiting for players!";
+        document.getElementById("liveGameBanner").style.display = "block";
+
+        // Pre-fill the join code
+        document.getElementById("joinCodeInput").value = code;
+      });
+    }).catch(() => {}); // silently ignore if room doesn't exist
+  });
+}
+
+function quickJoinLiveGame() {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) {
+    // Scroll to name input and focus it
+    document.getElementById("playerName").focus();
+    document.getElementById("playerName").placeholder = "Enter your name first! 👆";
+    showToast("Enter your name to join!");
+    return;
+  }
+  if (!liveRoomCode) return;
+  document.getElementById("joinCodeInput").value = liveRoomCode;
+  joinRoom();
+}
+
+// ── FIREBASE INIT ─────────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
 db = firebase.database();
+
+// Check for a live game as soon as Firebase is ready
+detectLiveGame();
 
 // ══════════════════════════════════════════════════════════════
 // LOBBY
@@ -1017,7 +1118,10 @@ function createRoom() {
   isHost = true;
   assignAvatar();
   // Wipe the entire room before creating — removes all stale players, chat, strokes
-  db.ref("rooms/" + roomCode).remove().then(() => setupRoom());
+  db.ref("rooms/" + roomCode).remove().then(() => {
+    document.getElementById("liveGameBanner").style.display = "none";
+    setupRoom();
+  });
 }
 
 function joinRoom() {
@@ -1156,7 +1260,7 @@ function renderPlayers(players) {
   grid.innerHTML = "";
   let count = 0;
   Object.entries(players).forEach(([id, p]) => {
-    if (!p || p.online === false) return;
+    if (!p || p.online === false || !p.name) return; // skip nameless/offline
     count++;
     const chip = document.createElement("div");
     chip.className = "player-chip" + (p.isHost ? " host" : "");
