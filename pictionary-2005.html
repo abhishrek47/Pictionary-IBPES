@@ -1578,23 +1578,25 @@ function handlePicking(g, isNewPhase) {
     // This covers drawer's tab being backgrounded or disconnected
     if (isHost) {
       wordChoiceTimeout = setTimeout(() => {
-        // Check we are still in picking phase for this round
-        gameRef.once("value").then(snap => {
-          const cur = snap.val();
-          if (!cur || cur.phase !== "picking" || cur.round !== (g.round || 1)) return;
-          // Auto-pick the first word choice
-          const choices = cur.wordChoices || getWordChoices(gameSettings.difficulty, usedWords);
-          if (choices && choices.length) {
-            const word = choices[0];
-            const blanks = word.split(" ").map(w => w.split("").map(()=>"_").join(" ")).join("   ");
-            const newUsed = [...(cur.usedWords || []), word];
-            gameRef.update({
-              word, wordBlanks: blanks, wordHints: blanks,
-              phase: "drawing",
-              startedAt: firebase.database.ServerValue.TIMESTAMP,
-              correctGuessers: [], usedWords: newUsed
-            });
+        gameRef.transaction(current => {
+          if (!current) return current;
+          if (current.phase !== "picking" || current.round !== (g.round || 1)) return; // abort
+          const choices = current.wordChoices || getWordChoices(gameSettings.difficulty, current.usedWords || []);
+          if (!choices || !choices.length) return;
+          const word = choices[0];
+          const blanks = word.split(" ").map(w => w.split("").map(()=>"_").join(" ")).join("   ");
+          current.word            = word;
+          current.wordBlanks      = blanks;
+          current.wordHints       = blanks;
+          current.phase           = "drawing";
+          current.startedAt       = firebase.database.ServerValue.TIMESTAMP;
+          current.correctGuessers = [];
+          current.usedWords       = [...(current.usedWords || []), word];
+          return current;
+        }).then(result => {
+          if (result.committed) {
             strokesRef.remove();
+            strokes = [];
           }
         });
       }, 13000);
@@ -1621,10 +1623,11 @@ function handleDrawing(g, isNewPhase) {
   const inp = document.getElementById("chatInput");
 
   if (amDrawing) {
-    // Only clear strokes and reset on first entry — not on Firebase re-fires
+    // strokesRef.remove() is NOT called here — selectWord() already cleared it
+    // atomically via transaction. Calling it again here caused a double-wipe race
+    // where late-firing removes deleted strokes the drawer had already started pushing.
     if (isNewPhase) {
-      strokesRef.remove();
-      strokes = [];
+      strokes = []; // reset local array only — Firebase already cleared by selectWord
     }
     currentWord = g.word || "";
     document.getElementById("topWord").textContent = currentWord;
@@ -1851,18 +1854,27 @@ function selectWord(word) {
 
   const blanks = word.split(" ").map(w => w.split("").map(()=>"_").join(" ")).join("   ");
 
-  // Re-read usedWords from Firebase to avoid stale local copy
-  gameRef.once("value").then(snap => {
-    const cur = snap.val() || {};
-    if (cur.phase !== "picking") return; // race — phase changed already
-    const newUsed = [...(cur.usedWords || []), word];
-    gameRef.update({
-      word, wordBlanks: blanks, wordHints: blanks,
-      phase: "drawing",
-      startedAt: firebase.database.ServerValue.TIMESTAMP,
-      correctGuessers: [], usedWords: newUsed
-    });
+  // Use a transaction to atomically write the word and transition to drawing.
+  // This eliminates the race between selectWord's async once() and handleDrawing's
+  // strokesRef.remove() — both of which were firing in an unpredictable order.
+  gameRef.transaction(current => {
+    if (!current) return current;
+    if (current.phase !== "picking") return; // abort — phase already changed
+    const newUsed = [...(current.usedWords || []), word];
+    current.word            = word;
+    current.wordBlanks      = blanks;
+    current.wordHints       = blanks;
+    current.phase           = "drawing";
+    current.startedAt       = firebase.database.ServerValue.TIMESTAMP;
+    current.correctGuessers = [];
+    current.usedWords       = newUsed;
+    return current;
+  }).then(result => {
+    if (!result.committed) return; // aborted — another client already wrote
+    // Clear the canvas ONCE, here, after the word is committed to Firebase
+    // Do NOT also clear it in handleDrawing — that causes the double-wipe race
     strokesRef.remove();
+    strokes = [];
   });
 }
 
