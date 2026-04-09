@@ -1122,7 +1122,17 @@ let micMuted = true, micHasError = false;
 
 // Listeners cleanup
 let strokeListener = null;
+let playersValueListener    = null;
+let playersAddedListener    = null;
+let playersChangedListener  = null;
+let gameListener            = null;
+let connectedListener       = null;
 let gameScreenEntered = false;
+
+// Tracks players we already know about — prevents join spam on re-attach
+const knownPlayerIds = new Set();
+// Tracks join messages already pushed to chat this session
+const chatJoinedIds = new Set();
 
 // ── LIVE GAME DETECTION — runs on page load ──────────────────────────────────
 // Scans Firebase for any active game and shows a banner if found
@@ -1277,49 +1287,56 @@ function setupRoom() {
     document.getElementById("hostSettings").style.display = "none";
   }
 
-  // System message — join
-  chatRef.push({ type: "system", text: `${myName} joined the game 👋`, ts: Date.now() });
+  // System message — join (only if we haven't sent one this session)
+  if (!chatJoinedIds.has(myId)) {
+    chatJoinedIds.add(myId);
+    chatRef.push({ type: "system", text: `${myName} joined the game 👋`, ts: Date.now() });
+  }
 
   showScreen("waiting");
   document.getElementById("displayRoomCode").textContent = roomCode;
 
-  // ── Players list listener
-  playersRef.on("value", snap => {
+  // ── Detach any existing listeners before re-attaching (prevents accumulation)
+  if (playersValueListener)   { playersRef.off("value",         playersValueListener);   playersValueListener   = null; }
+  if (playersAddedListener)   { playersRef.off("child_added",   playersAddedListener);   playersAddedListener   = null; }
+  if (playersChangedListener) { playersRef.off("child_changed", playersChangedListener); playersChangedListener = null; }
+  if (gameListener && gameRef){ gameRef.off("value", gameListener); gameListener = null; }
+
+  // ── Seed knownPlayerIds with everyone already in the room
+  // This prevents "X joined" firing for people who were already there
+  playersRef.once("value").then(snap => {
     const all = snap.val() || {};
-    // Populate name cache for instant drawer label (no async lookup needed)
+    Object.keys(all).forEach(id => knownPlayerIds.add(id));
+  });
+
+  // ── Players list listener
+  playersValueListener = playersRef.on("value", snap => {
+    const all = snap.val() || {};
     Object.entries(all).forEach(([id, p]) => {
       if (p && p.name) playerNameCache[id] = p.name;
     });
     renderPlayers(all);
     renderInGamePlayers(all);
-    // If game is active and player count drops to 1, pause
     if (gameScreenEntered) {
       const online = Object.values(all).filter(p => p && p.name && p.online !== false);
       if (online.length < 2) checkPlayerCount();
     }
   });
 
-  // ── Join/leave notifications
-  // readyForNotifs becomes true AFTER the initial player list has loaded
-  // so child_added for existing players doesn't trigger "X joined" toasts
-  let readyForNotifs = false;
-  playersRef.once("value").then(() => {
-    readyForNotifs = true;
-  });
-
-  playersRef.on("child_added", snap => {
+  // ── Join notifications — use knownPlayerIds set (populated before this fires)
+  playersAddedListener = playersRef.on("child_added", snap => {
     if (snap.key === myId) return;
-    if (!readyForNotifs) return; // still loading initial list — skip
+    if (knownPlayerIds.has(snap.key)) return; // already knew this player — not a new join
+    knownPlayerIds.add(snap.key);
     const p = snap.val();
     if (p && p.name && p.online !== false) {
       showNotif(`${p.avatar || "👤"} ${p.name} joined!`, "join");
     }
   });
-  // Track previous online state to fire leave only on actual disconnect
-  // Debounce per-player: suppress repeated disconnect messages within 30 seconds
+  // ── Leave notifications with debounce
   const onlineState = {};
   const leaveDebounce = {};
-  playersRef.on("child_changed", snap => {
+  playersChangedListener = playersRef.on("child_changed", snap => {
     if (snap.key === myId) return;
     const p = snap.val();
     if (!p || !p.name) return;
@@ -1370,7 +1387,7 @@ function setupRoom() {
     }
   });
 
-  gameRef.on("value", snap => {
+  gameListener = gameRef.on("value", snap => {
     const g = snap.val();
     if (!g) return;
     if (g.status === "playing" && !gameScreenEntered) {
@@ -2264,6 +2281,8 @@ function checkPlayerCount() {
         gameScreenEntered = false;
         currentPhase = "";
         roundActive = false;
+        // Don't clear knownPlayerIds here — still in same room, listeners still active
+        // Just clear chatJoinedIds so the "waiting for players" message can show
         hideOverlay("wordOverlay");
         hideOverlay("resultOverlay");
         hideOverlay("gameOverOverlay");
@@ -2622,11 +2641,21 @@ function copyRoomCode() {
 
 function backToLobby() {
   hideOverlay("gameOverOverlay");
-  // Full cleanup — same as confirmLeave
   clearInterval(timerInterval);
   clearInterval(hintInterval);
   if (window._hintTimeouts) { window._hintTimeouts.forEach(t => clearTimeout(t)); window._hintTimeouts = []; }
   clearTimeout(wordChoiceTimeout);
+  // Detach all Firebase listeners
+  if (playersRef) {
+    if (playersValueListener)   { playersRef.off("value",         playersValueListener);   playersValueListener   = null; }
+    if (playersAddedListener)   { playersRef.off("child_added",   playersAddedListener);   playersAddedListener   = null; }
+    if (playersChangedListener) { playersRef.off("child_changed", playersChangedListener); playersChangedListener = null; }
+  }
+  if (gameRef && gameListener)  { gameRef.off("value", gameListener); gameListener = null; }
+  if (strokeListener && strokesRef) { strokesRef.off("value", strokeListener); strokeListener = null; }
+  // Reset join tracking so next game doesn't suppress real joins
+  knownPlayerIds.clear();
+  chatJoinedIds.clear();
   try {
     if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
     if (agoraClient) { agoraClient.leave().catch(()=>{}); agoraClient = null; }
@@ -2695,6 +2724,17 @@ async function confirmLeave() {
     await playersRef.child(myId).update({ online: false });
     chatRef.push({ type: "system", text: `${myName} left the game 👋`, ts: Date.now() });
   }
+  // Detach all Firebase listeners
+  if (playersRef) {
+    if (playersValueListener)   { playersRef.off("value",         playersValueListener);   playersValueListener   = null; }
+    if (playersAddedListener)   { playersRef.off("child_added",   playersAddedListener);   playersAddedListener   = null; }
+    if (playersChangedListener) { playersRef.off("child_changed", playersChangedListener); playersChangedListener = null; }
+  }
+  if (gameRef && gameListener)  { gameRef.off("value", gameListener); gameListener = null; }
+  if (strokeListener && strokesRef) { strokesRef.off("value", strokeListener); strokeListener = null; }
+  // Reset join tracking
+  knownPlayerIds.clear();
+  chatJoinedIds.clear();
   try {
     if (localAudioTrack) { localAudioTrack.stop(); localAudioTrack.close(); localAudioTrack = null; }
     if (agoraClient) { await agoraClient.leave(); agoraClient = null; }
