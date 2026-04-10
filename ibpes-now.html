@@ -498,41 +498,32 @@ const FIREBASE_CONFIG = {
 const CLOUDINARY_CLOUD = "drrdaq19v";
 const CLOUDINARY_PRESET = "ibpes_now";
 
+// ── INIT ─────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
-const db = firebase.database();
-
+const db        = firebase.database();
 const photosRef = db.ref("ibpes-now/photos");
 const statsRef  = db.ref("ibpes-now/stats");
 
 // ── LOCAL STATE ──────────────────────────────────────────────────
-// myGuesses: { [photoId]: "guessed_name" } — stored in localStorage
-let myGuesses  = {};
-let myPhotoId  = null;
-let currentPhotoId = null;
+let myGuesses       = {};
+let myPhotoId       = null;
+let currentPhotoId  = null;
 let currentPhotoData = null;
-let allPhotos  = {};
-let selectedFile = null;
-let shareUrl   = "";
+let allPhotos       = {};
+let selectedFile    = null;
+let shareUrl        = "";
 
-// Load local state
 try {
   myGuesses = JSON.parse(localStorage.getItem("ibpes_guesses") || "{}");
   myPhotoId = localStorage.getItem("ibpes_my_photo") || null;
 } catch(e) {}
 
-// ── INIT ─────────────────────────────────────────────────────────
-// Quick connectivity + rules check before loading wall
-db.ref(".info/connected").once("value").then(snap => {
-  if (!snap.val()) {
-    showToast("Not connected to Firebase — check internet");
-  }
-});
-
+// Load wall and stats
 loadWall();
 loadStats();
 
-// Deep link: ?photo=ID — fetch fresh from Firebase, preserve guess state
-const urlParams = new URLSearchParams(window.location.search);
+// Deep link: ?photo=ID
+const urlParams    = new URLSearchParams(window.location.search);
 const directPhotoId = urlParams.get("photo");
 if (directPhotoId) {
   db.ref("ibpes-now/photos/" + directPhotoId).once("value").then(snap => {
