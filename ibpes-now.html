@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<!-- No Firebase Storage — using Cloudinary free tier instead -->
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -477,13 +477,20 @@ const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD6OgzIwlRzW7GJycQnEkdlS6tt_-CZaYA",
   authDomain: "pictionary-2005.firebaseapp.com",
   databaseURL: "https://pictionary-2005-default-rtdb.firebaseio.com",
-  projectId: "pictionary-2005",
-  storageBucket: "pictionary-2005.appspot.com"
+  projectId: "pictionary-2005"
+  // No storageBucket needed — using Cloudinary for photo storage
 };
 
+// ── CLOUDINARY CONFIG ─────────────────────────────────────────────
+// 1. Sign up free at cloudinary.com (no credit card)
+// 2. Copy your Cloud Name from the dashboard
+// 3. Settings → Upload → Add upload preset → Unsigned → name it "ibpes_now"
+const CLOUDINARY_CLOUD = "drrdaq19v";   // ← replace this
+const CLOUDINARY_PRESET = "ibpes_now";        // ← your unsigned preset name
+
 firebase.initializeApp(FIREBASE_CONFIG);
-const db      = firebase.database();
-const storage = firebase.storage();
+const db = firebase.database();
+
 const photosRef = db.ref("ibpes-now/photos");
 const statsRef  = db.ref("ibpes-now/stats");
 
@@ -504,15 +511,20 @@ try {
 } catch(e) {}
 
 // ── INIT ─────────────────────────────────────────────────────────
-firebase.initializeApp !== undefined; // already called
+// Quick connectivity + rules check before loading wall
+db.ref(".info/connected").once("value").then(snap => {
+  if (!snap.val()) {
+    showToast("Not connected to Firebase — check internet");
+  }
+});
+
 loadWall();
 loadStats();
 
-// Check if opened via direct photo link: ?photo=ID
+// Deep link: ?photo=ID — fetch fresh from Firebase, preserve guess state
 const urlParams = new URLSearchParams(window.location.search);
 const directPhotoId = urlParams.get("photo");
 if (directPhotoId) {
-  // Deep link — open that photo's guess modal directly
   db.ref("ibpes-now/photos/" + directPhotoId).once("value").then(snap => {
     const p = snap.val();
     if (p) openModal(directPhotoId, p);
@@ -530,10 +542,38 @@ function loadStats() {
 
 // ── WALL ──────────────────────────────────────────────────────────
 function loadWall() {
-  photosRef.orderByChild("uploadedAt").on("value", snap => {
+  // Safety timeout — if Firebase doesn't respond in 6s, show empty state
+  const timeout = setTimeout(() => {
+    document.getElementById("wallLoading").style.display = "none";
+    document.getElementById("wallGrid").style.display   = "none";
+    document.getElementById("emptyWall").style.display  = "block";
+    document.getElementById("emptyWall").innerHTML = `
+      <div class="empty-icon">📸</div>
+      <div class="empty-title">Be the first one!</div>
+      <div class="empty-sub">No photos added yet. Tap <strong>+ Add Mine</strong> to upload your NOW photo and get your batchmates guessing.</div>
+    `;
+  }, 6000);
+
+  photosRef.orderByChild("uploadedAt").once("value").then(snap => {
+    clearTimeout(timeout);
     const data = snap.val() || {};
     allPhotos = data;
     renderWall(data);
+    // Switch to live listener after first load
+    photosRef.orderByChild("uploadedAt").on("value", snap => {
+      allPhotos = snap.val() || {};
+      renderWall(allPhotos);
+    });
+  }).catch(err => {
+    clearTimeout(timeout);
+    console.warn("Firebase read failed:", err);
+    document.getElementById("wallLoading").style.display = "none";
+    document.getElementById("emptyWall").style.display  = "block";
+    document.getElementById("emptyWall").innerHTML = `
+      <div class="empty-icon">⚠️</div>
+      <div class="empty-title">Couldn't connect</div>
+      <div class="empty-sub">Check your internet connection and refresh the page. If this keeps happening, Firebase rules may need to be updated.</div>
+    `;
   });
 }
 
@@ -569,21 +609,27 @@ function renderWall(data) {
 
     const guessTotal   = p.guessTotal   || 0;
     const guessCorrect = p.guessCorrect || 0;
+    // Wall card NEVER shows the name — not even for guessed photos.
+    // Name only appears inside the modal after you commit a guess.
+    // This prevents name leakage via screenshots of the wall.
+    const wallLabel = isMine ? "Your photo" : (isRevealed ? "✓ Guessed" : "Who is this?");
 
     card.innerHTML = `
       ${isMine ? '<div class="badge-mine">Mine</div>' : ""}
       ${isNew && !isMine ? '<div class="badge-new">New</div>' : ""}
       <div class="photo-wrap">
-        <img src="${escHtml(p.url)}" class="${isRevealed ? "revealed" : "blurred"}" loading="lazy" />
-        ${!isRevealed ? `
+        <img src="${escHtml(p.url)}" class="${(isRevealed || isMine) ? "revealed" : "blurred"}" loading="lazy" />
+        ${!(isRevealed || isMine) ? `
           <div class="photo-overlay">
             <div class="question-mark">👤</div>
             <div class="tap-hint">Tap to guess</div>
-          </div>` : ""}
+          </div>` : `
+          <div class="photo-overlay" style="background:rgba(0,0,0,0);">
+          </div>`}
       </div>
       <div class="photo-footer">
-        <div class="photo-name ${isRevealed ? "" : "hidden-name"}">
-          ${isRevealed || isMine ? escHtml(p.name) : "Who is this?"}
+        <div class="photo-name ${isRevealed && !isMine ? "" : "hidden-name"}">
+          ${wallLabel}
         </div>
         <div class="photo-meta">
           ${guessTotal} guess${guessTotal !== 1 ? "es" : ""} · ${guessTotal > 0 ? Math.round(guessCorrect/guessTotal*100) : 0}% right
@@ -605,18 +651,41 @@ function openModal(id, photoData) {
   document.getElementById("modalPhoto").src = photoData.url;
   document.getElementById("guessInput").value = "";
 
-  if (isRevealed || isMine) {
-    // Already guessed — show reveal directly
+  if (isMine) {
+    // Your own photo — show name and stats, no guessing needed
     document.getElementById("modalPhoto").className = "modal-photo";
-    showReveal(myGuesses[id] || "revealed", photoData);
+    document.getElementById("guessSection").style.display  = "none";
+    document.getElementById("revealSection").style.display = "block";
+    document.getElementById("revealName").textContent = photoData.name || "?";
+    document.getElementById("revealResult").textContent = "This is your photo 📸";
+    document.getElementById("revealResult").className = "reveal-result skipped";
+    const total   = photoData.guessTotal   || 0;
+    const correct = photoData.guessCorrect || 0;
+    document.getElementById("statTotal").textContent   = total;
+    document.getElementById("statCorrect").textContent  = correct;
+    document.getElementById("statPct").textContent      = total > 0 ? Math.round(correct/total*100)+"%" : "0%";
+  } else if (isRevealed) {
+    // Already guessed on this device — show clear photo and reveal
+    // Re-fetch name fresh from Firebase (don't trust cached wall data)
+    document.getElementById("modalPhoto").className = "modal-photo";
+    document.getElementById("guessSection").style.display  = "none";
+    document.getElementById("revealSection").style.display = "block";
+    db.ref("ibpes-now/photos/" + id).once("value").then(snap => {
+      const fresh = snap.val() || photoData;
+      currentPhotoData = fresh;
+      showReveal(myGuesses[id] || "skipped", fresh);
+    });
   } else {
+    // Not yet guessed — show blurred, prompt for guess
     document.getElementById("modalPhoto").className = "modal-photo blurred-modal";
-    document.getElementById("guessSection").style.display = "block";
+    document.getElementById("guessSection").style.display  = "block";
     document.getElementById("revealSection").style.display = "none";
   }
 
   document.getElementById("modalBg").classList.add("show");
-  document.getElementById("guessInput").focus();
+  if (!isRevealed && !isMine) {
+    setTimeout(() => document.getElementById("guessInput").focus(), 300);
+  }
 }
 
 function closeModal(e) {
@@ -750,6 +819,11 @@ async function submitPhoto() {
   const name = document.getElementById("inputName").value.trim();
   if (!name || !selectedFile) return;
 
+  if (CLOUDINARY_CLOUD === "YOUR_CLOUD_NAME") {
+    showToast("Set your Cloudinary cloud name first!");
+    return;
+  }
+
   const btn = document.getElementById("btnSubmit");
   btn.disabled = true;
   btn.textContent = "Uploading...";
@@ -757,55 +831,75 @@ async function submitPhoto() {
   const progressBar  = document.getElementById("progressBar");
   const progressFill = document.getElementById("progressFill");
   progressBar.style.display = "block";
+  progressFill.style.width  = "0%";
 
   try {
-    // Compress image client-side before upload
+    // Compress image client-side (max 1200px, 82% quality)
     const compressed = await compressImage(selectedFile, 1200, 0.82);
 
-    // Generate unique ID
-    const photoId = "p_" + Date.now() + "_" + Math.random().toString(36).substr(2,6);
-    const storageRef = storage.ref(`ibpes-now/${photoId}.jpg`);
+    // Upload to Cloudinary via unsigned upload preset
+    const formData = new FormData();
+    formData.append("file", compressed, "photo.jpg");
+    formData.append("upload_preset", CLOUDINARY_PRESET);
+    formData.append("folder", "ibpes-now");
 
-    const uploadTask = storageRef.put(compressed);
-    uploadTask.on("state_changed", snap => {
-      const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
-      progressFill.style.width = pct + "%";
+    // Use XMLHttpRequest for upload progress
+    const url = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`);
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          progressFill.style.width = Math.round(e.loaded / e.total * 100) + "%";
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const res = JSON.parse(xhr.responseText);
+          // Use secure_url — Cloudinary CDN, fast globally
+          resolve(res.secure_url);
+        } else {
+          reject(new Error("Cloudinary upload failed: " + xhr.status));
+        }
+      };
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.send(formData);
     });
 
-    await uploadTask;
-    const url = await storageRef.getDownloadURL();
+    progressFill.style.width = "100%";
 
-    // Save to Firebase DB
+    // Generate unique ID and save to Firebase Realtime DB
+    const photoId = "p_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
     await db.ref("ibpes-now/photos/" + photoId).set({
       name, url,
       uploadedAt: firebase.database.ServerValue.TIMESTAMP,
       guessTotal: 0, guessCorrect: 0
     });
 
-    // Update stats
+    // Update global stats
     statsRef.transaction(cur => {
       if (!cur) return { photoCount: 1, guessCount: 0 };
       cur.photoCount = (cur.photoCount || 0) + 1;
       return cur;
     });
 
-    // Save my photo ID locally
+    // Remember this is my photo
     myPhotoId = photoId;
-    try { localStorage.setItem("ibpes_my_photo", photoId); } catch(e){}
+    try { localStorage.setItem("ibpes_my_photo", photoId); } catch(e) {}
 
-    // Build share URL
+    // Build and display share link
     shareUrl = `${window.location.origin}${window.location.pathname}?photo=${photoId}`;
     document.getElementById("shareLinkBox").textContent = shareUrl;
 
-    // Show success
+    // Show success card
     document.querySelector(".submit-card").style.display = "none";
     document.getElementById("successCard").style.display = "block";
 
   } catch(err) {
-    console.error(err);
-    showToast("Upload failed — try again");
+    console.error("Upload error:", err);
+    showToast("Upload failed — check your internet and try again");
     btn.disabled = false;
     btn.textContent = "Upload & Get My Link";
+    progressBar.style.display = "none";
   }
 }
 
