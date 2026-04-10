@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta property="og:title" content="Is this really you? 👀 IBPES Class of 2005">
 <meta property="og:description" content="Someone from your batch posted a NOW photo. Can you guess who?">
 <meta property="og:image" content="https://abhishektrivedi.com/ibpes-now/preview.jpg">
@@ -52,7 +52,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 
 /* ── HERO ── */
 .hero{
-  width:100%;max-width:680px;
+  width:100%;max-width:min(680px,100%);
   padding:32px 20px 16px;text-align:center;
 }
 .hero-title{
@@ -61,7 +61,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
   line-height:1.15;margin-bottom:12px;
 }
 .hero-title .hl{color:var(--gold);}
-.hero-sub{font-size:15px;color:var(--muted);line-height:1.6;max-width:480px;margin:0 auto 24px;}
+.hero-sub{font-size:15px;color:var(--muted);line-height:1.6;max-width:min(480px,100%);margin:0 auto 24px;}
 .stats-row{
   display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;
 }
@@ -74,7 +74,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 .stat-pill span{color:var(--gold);}
 
 /* ── SCREENS ── */
-.screen{display:none;width:100%;max-width:680px;padding:0 16px;}
+.screen{display:none;width:100%;max-width:min(680px,100%);padding:0 16px;}
 .screen.active{display:block;}
 
 /* ── WALL — photo grid ── */
@@ -101,13 +101,14 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 
 .photo-wrap{
   position:relative;width:100%;padding-top:100%;overflow:hidden;
+  isolation:isolate; /* contains blur within this element */
 }
 .photo-wrap img{
   position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;
   transition:filter 0.4s;
 }
-.photo-wrap img.blurred{filter:blur(18px) brightness(0.7);}
+.photo-wrap img.blurred{filter:blur(10px) brightness(0.75);}
 .photo-wrap img.revealed{filter:none;}
 
 .photo-overlay{
@@ -136,12 +137,14 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 
 .badge-mine{
   position:absolute;top:8px;right:8px;
+  z-index:10; /* always above photo-wrap stacking context */
   background:var(--terra);color:#fff;
   font-size:9px;font-weight:800;letter-spacing:1px;
   padding:2px 7px;border-radius:10px;text-transform:uppercase;
 }
 .badge-new{
   position:absolute;top:8px;left:8px;
+  z-index:10; /* always above photo-wrap stacking context */
   background:var(--gold);color:#1a1a1a;
   font-size:9px;font-weight:800;letter-spacing:1px;
   padding:2px 7px;border-radius:10px;text-transform:uppercase;
@@ -157,7 +160,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 .modal{
   background:var(--card);
   border-radius:24px 24px 0 0;
-  width:100%;max-width:480px;
+  width:100%;max-width:min(480px,100%);
   padding:8px 0 0;
   max-height:92vh;overflow-y:auto;
 }
@@ -169,7 +172,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
   width:100%;max-height:340px;object-fit:cover;
   display:block;
 }
-.modal-photo.blurred-modal{filter:blur(20px) brightness(0.65);transform:scale(1.05);}
+.modal-photo.blurred-modal{filter:blur(12px) brightness(0.72);transform:scale(1.05);}
 .modal-body{padding:20px 20px 32px;}
 .modal-title{
   font-family:'Playfair Display',serif;
@@ -349,6 +352,13 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+
+/* iPhone safe areas */
+@supports(padding:env(safe-area-inset-bottom)){
+  body{padding-bottom:max(60px,env(safe-area-inset-bottom));}
+  .topnav{padding-top:max(14px,env(safe-area-inset-top));}
+  .modal{padding-bottom:max(8px,env(safe-area-inset-bottom));}
+}
 </style>
 </head>
 <body>
@@ -485,8 +495,8 @@ const FIREBASE_CONFIG = {
 // 1. Sign up free at cloudinary.com (no credit card)
 // 2. Copy your Cloud Name from the dashboard
 // 3. Settings → Upload → Add upload preset → Unsigned → name it "ibpes_now"
-const CLOUDINARY_CLOUD = "drrdaq19v";   // ← replace this
-const CLOUDINARY_PRESET = "ibpes_now";        // ← your unsigned preset name
+const CLOUDINARY_CLOUD = "drrdaq19v";
+const CLOUDINARY_PRESET = "ibpes_now";
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const db = firebase.database();
