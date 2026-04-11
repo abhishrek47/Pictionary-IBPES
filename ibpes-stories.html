@@ -1,0 +1,1067 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IBPES Class of 2005 — Our Stories</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1e3a5f;--navy-dark:#162d4a;--terra:#c0392b;
+  --gold:#f0c040;--linen:#f5f0eb;--mint:#3dd68c;
+  --bg:#0f1923;--card:#1a2535;--card2:#1e2d40;
+  --border:rgba(255,255,255,0.08);--text:#f5f0eb;
+  --muted:rgba(245,240,235,0.5);
+  --read-bg:#faf8f5;--read-text:#1a1a1a;--read-muted:#666;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ══ SCREENS ══ */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+
+/* ══ LANDING ══ */
+#landing{background:var(--bg);}
+.land-hero{
+  background:linear-gradient(160deg,var(--navy-dark),#0f1923);
+  border-bottom:1px solid var(--border);
+  padding:48px 24px 40px;text-align:center;
+}
+.land-eyebrow{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--terra);font-weight:700;margin-bottom:16px;
+}
+.land-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(32px,6vw,52px);
+  color:var(--linen);line-height:1.15;margin-bottom:16px;
+}
+.land-title em{color:var(--gold);font-style:italic;}
+.land-sub{font-size:16px;color:var(--muted);max-width:520px;margin:0 auto 28px;line-height:1.7;}
+.land-stats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:32px;}
+.land-stat{
+  background:rgba(255,255,255,0.05);border:1px solid var(--border);
+  border-radius:20px;padding:6px 18px;
+  font-size:12px;font-weight:700;color:var(--muted);
+}
+.land-stat span{color:var(--gold);}
+.btn-start{
+  display:inline-flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,var(--navy),var(--terra));
+  color:#fff;padding:16px 32px;border-radius:14px;border:none;
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 4px 20px rgba(192,57,43,0.3);transition:all 0.2s;
+}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(192,57,43,0.45);}
+
+.chapters-section{padding:32px 16px 60px;max-width:900px;margin:0 auto;}
+.section-label{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;margin-bottom:20px;
+}
+.chapters-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;
+}
+@media(max-width:360px){.chapters-grid{grid-template-columns:1fr;}}
+
+.chapter-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:18px;overflow:hidden;cursor:pointer;
+  transition:transform 0.2s,box-shadow 0.2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.chapter-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.4);}
+.chapter-card.published{border-color:rgba(61,214,140,0.2);}
+.card-cover{
+  width:100%;height:160px;object-fit:cover;display:block;
+  background:linear-gradient(135deg,var(--navy-dark),#0f1923);
+}
+.card-cover-placeholder{
+  width:100%;height:160px;
+  background:linear-gradient(135deg,var(--navy-dark),#1a2535);
+  display:flex;align-items:center;justify-content:center;
+  font-size:40px;
+}
+.card-body{padding:16px;}
+.card-name{
+  font-family:'Playfair Display',serif;
+  font-size:18px;font-weight:700;color:var(--linen);
+  margin-bottom:4px;
+}
+.card-tagline{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4;}
+.card-excerpt{font-size:13px;color:rgba(245,240,235,0.6);line-height:1.6;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;}
+.card-words{font-size:11px;color:var(--muted);}
+.card-status{
+  font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  padding:3px 9px;border-radius:10px;
+}
+.card-status.published{background:rgba(61,214,140,0.15);color:var(--mint);border:1px solid rgba(61,214,140,0.25);}
+.card-status.draft{background:rgba(240,192,64,0.12);color:var(--gold);border:1px solid rgba(240,192,64,0.2);}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:52px;margin-bottom:16px;}
+.empty-title{font-size:20px;font-weight:700;color:var(--linen);margin-bottom:8px;}
+.empty-sub{font-size:14px;line-height:1.6;}
+
+/* ══ START MODAL ══ */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:500;backdrop-filter:blur(8px);
+}
+.modal-bg.show{display:flex;}
+.modal{
+  background:var(--card);border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;padding:8px 0 0;
+  max-height:92vh;overflow-y:auto;
+}
+.modal-drag{width:40px;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;margin:0 auto 24px;}
+.modal-body{padding:0 24px 40px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--linen);margin-bottom:8px;}
+.modal-sub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6;}
+
+/* Structure choice */
+.structure-cards{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+.structure-card{
+  flex:1;min-width:180px;padding:18px 16px;
+  background:var(--card2);border:2px solid var(--border);
+  border-radius:14px;cursor:pointer;transition:all 0.2s;
+  -webkit-tap-highlight-color:transparent;text-align:center;
+}
+.structure-card:hover,.structure-card.selected{border-color:var(--terra);background:rgba(192,57,43,0.08);}
+.structure-icon{font-size:28px;margin-bottom:8px;}
+.structure-name{font-size:14px;font-weight:800;color:var(--linen);margin-bottom:4px;}
+.structure-desc{font-size:12px;color:var(--muted);line-height:1.4;}
+
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.field input,.field textarea{
+  width:100%;padding:13px 16px;
+  background:var(--card2);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--linen);
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;
+  outline:none;transition:border-color 0.2s;resize:none;
+}
+.field input:focus,.field textarea:focus{border-color:var(--terra);}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted);}
+.btn-modal{
+  width:100%;padding:15px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--navy),var(--terra));
+  color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 4px 16px rgba(192,57,43,0.25);min-height:52px;
+}
+.btn-modal:disabled{opacity:0.5;cursor:not-allowed;}
+.modal-warn{
+  font-size:12px;color:var(--muted);text-align:center;
+  margin-top:12px;line-height:1.5;
+}
+.modal-warn strong{color:var(--gold);}
+
+/* ══ EDITOR ══ */
+#editor-screen{background:#111827;}
+.editor-topbar{
+  background:var(--navy);border-bottom:2px solid var(--terra);
+  padding:12px 16px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:100;
+}
+.editor-brand{font-family:'Playfair Display',serif;font-size:16px;color:var(--linen);}
+.editor-brand span{color:var(--gold);}
+.editor-actions{display:flex;gap:8px;align-items:center;}
+.btn-save{
+  padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);
+  background:transparent;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;
+}
+.btn-save:hover{color:var(--linen);border-color:rgba(255,255,255,0.3);}
+.btn-publish{
+  padding:8px 18px;border-radius:8px;border:none;
+  background:var(--terra);color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.autosave-indicator{font-size:11px;color:var(--muted);}
+
+.editor-wrap{max-width:720px;margin:0 auto;padding:32px 16px 80px;}
+
+/* Cover photo upload */
+.cover-upload{
+  width:100%;height:220px;border-radius:16px;
+  border:2px dashed rgba(255,255,255,0.12);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:8px;cursor:pointer;
+  transition:all 0.2s;margin-bottom:28px;position:relative;overflow:hidden;
+  background:var(--card);
+}
+.cover-upload:hover{border-color:var(--terra);}
+.cover-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
+.cover-icon{font-size:32px;}
+.cover-text{font-size:14px;font-weight:700;color:var(--muted);}
+.cover-hint{font-size:11px;color:rgba(245,240,235,0.3);}
+.cover-edit-btn{
+  position:absolute;bottom:10px;right:10px;
+  background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:8px;
+  padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  display:none;backdrop-filter:blur(4px);
+}
+
+/* Name and tagline inputs */
+.chapter-name-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font-family:'Playfair Display',serif;font-size:clamp(28px,6vw,42px);
+  font-weight:700;color:var(--linen);margin-bottom:8px;
+  border-bottom:2px solid var(--border);padding-bottom:8px;
+  transition:border-color 0.2s;
+}
+.chapter-name-input:focus{border-color:var(--terra);}
+.chapter-name-input::placeholder{color:rgba(245,240,235,0.2);}
+.chapter-tagline-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;
+  color:var(--muted);margin-bottom:24px;
+  border-bottom:1.5px solid var(--border);padding-bottom:8px;
+  transition:border-color 0.2s;
+}
+.chapter-tagline-input:focus{border-color:rgba(255,255,255,0.2);}
+.chapter-tagline-input::placeholder{color:rgba(245,240,235,0.15);}
+
+/* Quill customisation */
+.ql-toolbar.ql-snow{
+  background:var(--card);border:1px solid var(--border)!important;
+  border-radius:10px 10px 0 0;padding:8px;
+}
+.ql-container.ql-snow{
+  background:var(--card);border:1px solid var(--border)!important;
+  border-top:none!important;border-radius:0 0 10px 10px;
+  font-family:'DM Sans',sans-serif;font-size:16px;
+  color:var(--linen);min-height:300px;
+}
+.ql-editor{min-height:300px;padding:20px;line-height:1.8;}
+.ql-editor.ql-blank::before{color:rgba(245,240,235,0.2)!important;font-style:italic;}
+.ql-snow .ql-stroke{stroke:var(--muted)!important;}
+.ql-snow .ql-fill{fill:var(--muted)!important;}
+.ql-snow .ql-picker{color:var(--muted)!important;}
+.ql-snow .ql-picker-options{background:var(--card2)!important;border-color:var(--border)!important;}
+.ql-snow.ql-toolbar button:hover .ql-stroke,.ql-snow.ql-toolbar button.ql-active .ql-stroke{stroke:var(--linen)!important;}
+
+/* Media section */
+.media-section{margin-top:24px;}
+.media-title{
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;margin-bottom:14px;
+}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+.media-thumb{
+  position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+  background:var(--card2);
+}
+.media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover;}
+.media-remove{
+  position:absolute;top:4px;right:4px;width:20px;height:20px;
+  background:rgba(0,0,0,0.7);border:none;border-radius:50%;
+  color:#fff;font-size:10px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.media-add-row{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-media{
+  padding:10px 16px;border-radius:10px;border:1.5px dashed rgba(255,255,255,0.15);
+  background:transparent;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-media:hover{border-color:var(--terra);color:var(--linen);}
+.video-link-input{
+  width:100%;padding:10px 14px;margin-top:10px;display:none;
+  background:var(--card2);border:1.5px solid var(--border);
+  border-radius:10px;color:var(--linen);
+  font-family:'DM Sans',sans-serif;font-size:14px;outline:none;
+}
+.video-link-input:focus{border-color:var(--terra);}
+.video-link-input::placeholder{color:var(--muted);}
+
+/* Progress bar */
+.upload-progress{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin:10px 0;display:none;}
+.upload-fill{height:100%;background:var(--terra);border-radius:2px;transition:width 0.3s;width:0;}
+
+/* ══ READING VIEW ══ */
+#read-screen{background:var(--read-bg);color:var(--read-text);}
+.read-topbar{
+  background:rgba(250,248,245,0.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(0,0,0,0.08);
+  padding:12px 20px;display:flex;align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.read-brand{font-family:'Playfair Display',serif;font-size:16px;color:var(--navy);}
+.read-brand span{color:var(--terra);}
+.btn-read-back{
+  padding:8px 16px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);
+  background:transparent;color:#666;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.btn-share-wa{
+  padding:8px 16px;border-radius:8px;border:none;
+  background:#25d366;color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+
+.read-cover{
+  width:100%;height:340px;object-fit:cover;display:block;
+}
+.read-cover-placeholder{
+  width:100%;height:220px;
+  background:linear-gradient(135deg,var(--navy),var(--terra));
+  display:flex;align-items:center;justify-content:center;
+  font-size:64px;
+}
+
+.read-content{max-width:680px;margin:0 auto;padding:40px 24px 80px;}
+.read-eyebrow{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--terra);font-weight:700;margin-bottom:16px;
+}
+.read-name{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(32px,6vw,52px);
+  color:var(--read-text);line-height:1.2;margin-bottom:12px;
+}
+.read-tagline{
+  font-size:18px;color:var(--read-muted);margin-bottom:8px;
+  font-family:'DM Serif Display',serif;font-style:italic;
+}
+.read-meta{
+  font-size:12px;color:var(--read-muted);
+  margin-bottom:40px;padding-bottom:32px;
+  border-bottom:1px solid rgba(0,0,0,0.08);
+  display:flex;gap:16px;flex-wrap:wrap;
+}
+.read-body{
+  font-family:'DM Serif Display',serif;
+  font-size:19px;line-height:1.9;color:#2a2a2a;
+  margin-bottom:40px;
+}
+.read-body p{margin-bottom:1.2em;}
+.read-body h1,.read-body h2{font-family:'Playfair Display',serif;color:var(--navy);margin:1.5em 0 0.5em;}
+.read-body h1{font-size:28px;}
+.read-body h2{font-size:22px;}
+.read-body blockquote{
+  border-left:3px solid var(--terra);padding-left:20px;
+  color:var(--read-muted);font-style:italic;margin:1.5em 0;
+}
+.read-body ul,.read-body ol{padding-left:24px;margin-bottom:1em;}
+.read-body li{margin-bottom:0.4em;}
+.read-body strong{color:var(--read-text);font-weight:700;}
+
+.read-photos{margin:40px 0;}
+.read-photos-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;
+}
+.read-photo{width:100%;border-radius:12px;display:block;object-fit:cover;}
+.read-video-wrap{margin:24px 0;border-radius:12px;overflow:hidden;}
+.read-video-wrap video{width:100%;display:block;}
+.read-video-wrap iframe{width:100%;aspect-ratio:16/9;border:none;display:block;}
+
+.read-footer{
+  text-align:center;padding-top:40px;
+  border-top:1px solid rgba(0,0,0,0.08);
+}
+.read-footer-text{font-size:14px;color:var(--read-muted);margin-bottom:16px;}
+.btn-read-wa{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#25d366;color:#fff;
+  padding:12px 24px;border-radius:12px;border:none;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+
+/* ══ TOAST ══ */
+#toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--navy);color:var(--linen);
+  border:1px solid var(--terra);padding:12px 22px;
+  border-radius:30px;font-size:13px;font-weight:700;
+  z-index:9999;opacity:0;transition:all 0.3s;
+  pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+
+@supports(padding:env(safe-area-inset-bottom)){
+  .editor-topbar,.read-topbar{padding-top:max(12px,env(safe-area-inset-top));}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LANDING ══ -->
+<div id="landing" class="screen active">
+  <div class="land-hero">
+    <div class="land-eyebrow">IBPES Class of 2005</div>
+    <div class="land-title">We had stories<br>nobody ever <em>asked about.</em></div>
+    <div class="land-sub">Write yours now. Take your time. Share it when you're ready. We'll compile everything into one book our batch can keep.</div>
+    <div class="land-stats">
+      <div class="land-stat"><span id="statChapters">0</span> chapters written</div>
+      <div class="land-stat"><span id="statWords">0</span> words shared</div>
+      <div class="land-stat">IBPES · 2005</div>
+    </div>
+    <button class="btn-start" onclick="openStartModal()">✍️ Start my chapter</button>
+  </div>
+  <div class="chapters-section">
+    <div class="section-label">Chapters written so far</div>
+    <div id="chaptersGrid" class="chapters-grid">
+      <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">No chapters yet</div>
+        <div class="empty-sub">Be the first one to write your story. Your batchmates are waiting to hear what happened after 2005.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ START MODAL ══ -->
+<div class="modal-bg" id="startModal" onclick="closeStartModal(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-body">
+      <div class="modal-title">Start your chapter ✍️</div>
+      <div class="modal-sub">How do you want to write?</div>
+
+      <div class="structure-cards">
+        <div class="structure-card" id="card-free" onclick="selectStructure('free')">
+          <div class="structure-icon">✨</div>
+          <div class="structure-name">Free write</div>
+          <div class="structure-desc">Blank page. Just start writing whatever feels right.</div>
+        </div>
+        <div class="structure-card" id="card-guided" onclick="selectStructure('guided')">
+          <div class="structure-icon">🗺️</div>
+          <div class="structure-name">Guided</div>
+          <div class="structure-desc">Optional sections to prompt you. Delete or ignore any of them.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="startName" placeholder="As you want it to appear" maxlength="60" oninput="checkStartReady()" />
+      </div>
+      <div class="field">
+        <label>One line — where you are now (optional)</label>
+        <input type="text" id="startTagline" placeholder="e.g. Doctor in Bangalore, father of two chaotic kids" maxlength="100" />
+      </div>
+
+      <button class="btn-modal" id="btnStartChapter" onclick="createChapter()" disabled>
+        Open my editor →
+      </button>
+      <div class="modal-warn">
+        You'll get a <strong>private edit link</strong> — bookmark it. Anyone with your <strong>read link</strong> can read your chapter once you publish.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDITOR ══ -->
+<div id="editor-screen" class="screen">
+  <div class="editor-topbar">
+    <div class="editor-brand">IBPES <span>2005</span></div>
+    <div class="editor-actions">
+      <div class="autosave-indicator" id="autosaveLabel">All saved</div>
+      <button class="btn-save" onclick="saveChapter()">Save</button>
+      <button class="btn-publish" onclick="publishChapter()">Publish ✓</button>
+    </div>
+  </div>
+
+  <div class="editor-wrap">
+    <!-- Cover photo -->
+    <div class="cover-upload" id="coverUpload">
+      <input type="file" id="coverFileInput" accept="image/*" onchange="uploadCover(this)" />
+      <img class="cover-img" id="coverPreview" />
+      <div class="cover-icon">🖼️</div>
+      <div class="cover-text">Add a cover photo</div>
+      <div class="cover-hint">Your favourite photo — recent or from school days</div>
+      <button class="cover-edit-btn" id="coverEditBtn" onclick="triggerCoverChange(event)">Change photo</button>
+    </div>
+
+    <!-- Name & tagline -->
+    <input class="chapter-name-input" id="editorName" placeholder="Your name" maxlength="60" oninput="markDirty()" />
+    <input class="chapter-tagline-input" id="editorTagline" placeholder="One line — where are you now?" maxlength="100" oninput="markDirty()" />
+
+    <!-- Rich text editor -->
+    <div id="quillEditor"></div>
+
+    <!-- Media section -->
+    <div class="media-section">
+      <div class="media-title">Photos &amp; Videos</div>
+      <div class="media-grid" id="mediaGrid"></div>
+      <div class="upload-progress" id="uploadProgress">
+        <div class="upload-fill" id="uploadFill"></div>
+      </div>
+      <div class="media-add-row">
+        <button class="btn-media" onclick="document.getElementById('mediaFileInput').click()">
+          📷 Add photo / video
+        </button>
+        <button class="btn-media" onclick="toggleVideoLink()">
+          🔗 Paste YouTube / Vimeo link
+        </button>
+      </div>
+      <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none" onchange="uploadMedia(this)" />
+      <input class="video-link-input" id="videoLinkInput" placeholder="Paste YouTube or Vimeo URL here..." onkeydown="handleVideoLink(event)" />
+    </div>
+  </div>
+</div>
+
+<!-- ══ READING VIEW ══ -->
+<div id="read-screen" class="screen">
+  <div class="read-topbar">
+    <div class="read-brand">IBPES <span>2005</span></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-read-back" onclick="showLanding()">← All chapters</button>
+      <button class="btn-share-wa" onclick="shareChapter()">📲 Share</button>
+    </div>
+  </div>
+  <div id="readContent"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD6OgzIwlRzW7GJycQnEkdlS6tt_-CZaYA",
+  authDomain: "pictionary-2005.firebaseapp.com",
+  databaseURL: "https://pictionary-2005-default-rtdb.firebaseio.com",
+  projectId: "pictionary-2005"
+};
+const CLOUDINARY_CLOUD  = "drrdaq19v";
+const CLOUDINARY_PRESET = "ibpes_now";
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+const storiesRef = db.ref("ibpes-stories");
+
+// ── STATE ─────────────────────────────────────────────────────────
+let currentChapterId = null;
+let currentEditToken = null;
+let quill = null;
+let autoSaveTimer = null;
+let isDirty = false;
+let selectedStructure = null;
+let mediaItems = []; // { type, url, publicId }
+let currentReadId = null;
+
+const GUIDED_TEMPLATE = `
+<h2>Where I am now</h2>
+<p><em>City, what you do, who you've become...</em></p>
+
+<h2>My journey after school</h2>
+<p><em>What happened after 10th? The path you took, the ones you didn't...</em></p>
+
+<h2>What went wrong (and what I learned)</h2>
+<p><em>The hard parts. The detours. What they taught you...</em></p>
+
+<h2>What I'm proud of</h2>
+<p><em>Big or small. Something that matters to you...</em></p>
+
+<h2>What school actually taught me</h2>
+<p><em>Not the textbooks. The real stuff...</em></p>
+
+<h2>One thing I'd tell my 14-year-old self</h2>
+<p><em>You know what it is...</em></p>
+`;
+
+// ── ROUTING ───────────────────────────────────────────────────────
+function route() {
+  const params = new URLSearchParams(window.location.search);
+  const writeToken = params.get("write");
+  const readId     = params.get("read");
+
+  if (writeToken) {
+    openEditorByToken(writeToken);
+  } else if (readId) {
+    openReadView(readId);
+  } else {
+    showLanding();
+  }
+}
+
+function showLanding() {
+  showScreen("landing");
+  loadChapters();
+  history.replaceState({}, "", window.location.pathname);
+}
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+// ── LANDING ───────────────────────────────────────────────────────
+function loadChapters() {
+  storiesRef.orderByChild("createdAt").on("value", snap => {
+    const data = snap.val() || {};
+    renderChapters(data);
+    updateStats(data);
+  });
+}
+
+function updateStats(data) {
+  const chapters = Object.values(data);
+  const published = chapters.filter(c => c.status === "published");
+  let totalWords = 0;
+  published.forEach(c => { totalWords += c.wordCount || 0; });
+  document.getElementById("statChapters").textContent = published.length;
+  document.getElementById("statWords").textContent = totalWords > 999 
+    ? Math.round(totalWords/1000) + "k" : totalWords;
+}
+
+function renderChapters(data) {
+  const grid = document.getElementById("chaptersGrid");
+  const chapters = Object.entries(data)
+    .filter(([, c]) => c && c.name)
+    .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+
+  if (!chapters.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">No chapters yet</div>
+        <div class="empty-sub">Be the first one to write your story.</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = "";
+  chapters.forEach(([id, c]) => {
+    if (c.status !== "published") return; // only show published
+    const card = document.createElement("div");
+    card.className = "chapter-card published";
+    card.onclick = () => openReadView(id);
+
+    const excerpt = stripHtml(c.content || "").substring(0, 160);
+    const words = c.wordCount || 0;
+
+    card.innerHTML = `
+      ${c.coverUrl
+        ? `<img class="card-cover" src="${escHtml(c.coverUrl)}" loading="lazy" />`
+        : `<div class="card-cover-placeholder">${getEmoji(c.name)}</div>`}
+      <div class="card-body">
+        <div class="card-name">${escHtml(c.name)}</div>
+        ${c.tagline ? `<div class="card-tagline">${escHtml(c.tagline)}</div>` : ""}
+        ${excerpt ? `<div class="card-excerpt">${escHtml(excerpt)}</div>` : ""}
+        <div class="card-footer">
+          <div class="card-words">${words} words</div>
+          <div class="card-status published">Published</div>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function getEmoji(name) {
+  const emojis = ["📖","✍️","🌟","💫","🎯","🌍","🚀","💡","🎨","🎵","🏆","💎"];
+  let h = 0;
+  for (let i = 0; i < (name||"").length; i++) h = ((h << 5) - h) + name.charCodeAt(i);
+  return emojis[Math.abs(h) % emojis.length];
+}
+
+// ── START MODAL ───────────────────────────────────────────────────
+function openStartModal() {
+  document.getElementById("startModal").classList.add("show");
+}
+function closeStartModal(e) {
+  if (e.target === document.getElementById("startModal"))
+    document.getElementById("startModal").classList.remove("show");
+}
+function selectStructure(type) {
+  selectedStructure = type;
+  document.getElementById("card-free").classList.toggle("selected", type === "free");
+  document.getElementById("card-guided").classList.toggle("selected", type === "guided");
+  checkStartReady();
+}
+function checkStartReady() {
+  const name = document.getElementById("startName").value.trim();
+  document.getElementById("btnStartChapter").disabled = !(name && selectedStructure);
+}
+
+async function createChapter() {
+  const name    = document.getElementById("startName").value.trim();
+  const tagline = document.getElementById("startTagline").value.trim();
+  if (!name || !selectedStructure) return;
+
+  const chapterId = "ch_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+  const editToken = "tok_" + Math.random().toString(36).substr(2, 16);
+
+  const content = selectedStructure === "guided" ? GUIDED_TEMPLATE : "";
+
+  await db.ref("ibpes-stories/" + chapterId).set({
+    name, tagline, content,
+    editToken, status: "draft",
+    coverUrl: "", wordCount: 0,
+    media: [],
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+
+  document.getElementById("startModal").classList.remove("show");
+
+  // Save tokens locally
+  try {
+    const myChapters = JSON.parse(localStorage.getItem("ibpes_my_chapters") || "{}");
+    myChapters[chapterId] = editToken;
+    localStorage.setItem("ibpes_my_chapters", JSON.stringify(myChapters));
+  } catch(e) {}
+
+  currentChapterId = chapterId;
+  currentEditToken = editToken;
+  openEditor({ name, tagline, content, coverUrl:"", media:[] });
+  history.replaceState({}, "", `?write=${editToken}`);
+  showToast("Chapter created! Bookmark this page URL to come back and edit.");
+}
+
+// ── EDITOR ────────────────────────────────────────────────────────
+function openEditorByToken(token) {
+  // Find chapter with this edit token
+  storiesRef.orderByChild("editToken").equalTo(token).once("value").then(snap => {
+    const data = snap.val();
+    if (!data) { showToast("Chapter not found"); showLanding(); return; }
+    const [id, chapter] = Object.entries(data)[0];
+    currentChapterId = id;
+    currentEditToken = token;
+    mediaItems = chapter.media || [];
+    openEditor(chapter);
+    history.replaceState({}, "", `?write=${token}`);
+  });
+}
+
+function openEditor(chapter) {
+  showScreen("editor-screen");
+
+  // Init Quill once
+  if (!quill) {
+    quill = new Quill("#quillEditor", {
+      theme: "snow",
+      placeholder: "Your story begins here...",
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, false] }],
+          ["bold", "italic", "blockquote"],
+          [{ list: "ordered" }, { list: "bullet" }],
+          ["clean"]
+        ]
+      }
+    });
+    quill.on("text-change", () => markDirty());
+  }
+
+  // Populate fields
+  document.getElementById("editorName").value    = chapter.name    || "";
+  document.getElementById("editorTagline").value = chapter.tagline || "";
+  quill.root.innerHTML = chapter.content || "";
+
+  // Cover
+  if (chapter.coverUrl) {
+    document.getElementById("coverPreview").src = chapter.coverUrl;
+    document.getElementById("coverPreview").style.display = "block";
+    document.getElementById("coverEditBtn").style.display = "block";
+  }
+
+  // Media
+  mediaItems = chapter.media || [];
+  renderMediaGrid();
+
+  // Autosave every 30s
+  clearInterval(autoSaveTimer);
+  autoSaveTimer = setInterval(() => {
+    if (isDirty) saveChapter(true);
+  }, 30000);
+}
+
+function markDirty() {
+  isDirty = true;
+  document.getElementById("autosaveLabel").textContent = "Unsaved changes";
+}
+
+async function saveChapter(silent = false) {
+  if (!currentChapterId) return;
+  const name    = document.getElementById("editorName").value.trim();
+  const tagline = document.getElementById("editorTagline").value.trim();
+  const content = quill ? quill.root.innerHTML : "";
+  const wordCount = (content.replace(/<[^>]+>/g, " ").match(/\S+/g) || []).length;
+
+  await db.ref("ibpes-stories/" + currentChapterId).update({
+    name, tagline, content, wordCount,
+    media: mediaItems,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+
+  isDirty = false;
+  document.getElementById("autosaveLabel").textContent = "All saved";
+  if (!silent) showToast("Saved ✓");
+}
+
+async function publishChapter() {
+  await saveChapter(true);
+  await db.ref("ibpes-stories/" + currentChapterId).update({ status: "published" });
+
+  const readUrl = `${window.location.origin}${window.location.pathname}?read=${currentChapterId}`;
+  const text = `I wrote my IBPES story 📖\n\nRead it here: ${readUrl}\n\nOur batch journal — everyone's writing theirs too!`;
+  
+  showToast("Published! Sharing to WhatsApp...");
+  setTimeout(() => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, 800);
+}
+
+// ── COVER UPLOAD ──────────────────────────────────────────────────
+async function uploadCover(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const compressed = await compressImage(file, 1400, 0.85);
+  const url = await uploadToCloudinary(compressed, "cover");
+  if (!url) return;
+  document.getElementById("coverPreview").src = url;
+  document.getElementById("coverPreview").style.display = "block";
+  document.getElementById("coverEditBtn").style.display = "block";
+  await db.ref("ibpes-stories/" + currentChapterId).update({ coverUrl: url });
+  showToast("Cover photo saved ✓");
+}
+function triggerCoverChange(e) {
+  e.stopPropagation();
+  document.getElementById("coverFileInput").click();
+}
+
+// ── MEDIA ─────────────────────────────────────────────────────────
+async function uploadMedia(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const isVideo = file.type.startsWith("video/");
+
+  let url;
+  if (isVideo) {
+    // Upload video directly (Cloudinary handles video on same preset)
+    url = await uploadToCloudinary(file, "media");
+  } else {
+    const compressed = await compressImage(file, 1200, 0.82);
+    url = await uploadToCloudinary(compressed, "media");
+  }
+  if (!url) return;
+
+  mediaItems.push({ type: isVideo ? "video" : "image", url });
+  renderMediaGrid();
+  markDirty();
+  input.value = "";
+}
+
+function toggleVideoLink() {
+  const inp = document.getElementById("videoLinkInput");
+  inp.style.display = inp.style.display === "block" ? "none" : "block";
+  if (inp.style.display === "block") inp.focus();
+}
+
+function handleVideoLink(e) {
+  if (e.key !== "Enter") return;
+  const url = document.getElementById("videoLinkInput").value.trim();
+  if (!url) return;
+  if (!url.includes("youtube") && !url.includes("youtu.be") && !url.includes("vimeo")) {
+    showToast("Paste a YouTube or Vimeo link");
+    return;
+  }
+  mediaItems.push({ type: "embed", url });
+  renderMediaGrid();
+  markDirty();
+  document.getElementById("videoLinkInput").value = "";
+  document.getElementById("videoLinkInput").style.display = "none";
+  showToast("Video added ✓");
+}
+
+function renderMediaGrid() {
+  const grid = document.getElementById("mediaGrid");
+  grid.innerHTML = "";
+  mediaItems.forEach((m, i) => {
+    const wrap = document.createElement("div");
+    wrap.className = "media-thumb";
+    if (m.type === "image") {
+      wrap.innerHTML = `<img src="${escHtml(m.url)}" loading="lazy" />`;
+    } else if (m.type === "video") {
+      wrap.innerHTML = `<video src="${escHtml(m.url)}" muted></video>`;
+    } else {
+      wrap.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--card2);font-size:24px;">▶️</div>`;
+    }
+    wrap.innerHTML += `<button class="media-remove" onclick="removeMedia(${i})">×</button>`;
+    grid.appendChild(wrap);
+  });
+}
+
+function removeMedia(i) {
+  mediaItems.splice(i, 1);
+  renderMediaGrid();
+  markDirty();
+}
+
+// ── READ VIEW ─────────────────────────────────────────────────────
+function openReadView(id) {
+  currentReadId = id;
+  showScreen("read-screen");
+  history.replaceState({}, "", `?read=${id}`);
+
+  db.ref("ibpes-stories/" + id).once("value").then(snap => {
+    const c = snap.val();
+    if (!c) { showToast("Chapter not found"); showLanding(); return; }
+    renderReadView(c);
+  });
+}
+
+function renderReadView(c) {
+  const media = c.media || [];
+  const photos = media.filter(m => m.type === "image");
+  const videos = media.filter(m => m.type === "video" || m.type === "embed");
+  const wordCount = c.wordCount || 0;
+  const mins = Math.max(1, Math.round(wordCount / 200));
+
+  let mediaHtml = "";
+  if (photos.length) {
+    mediaHtml += `<div class="read-photos">
+      <div class="read-photos-grid">
+        ${photos.map(p => `<img class="read-photo" src="${escHtml(p.url)}" loading="lazy" />`).join("")}
+      </div>
+    </div>`;
+  }
+  videos.forEach(v => {
+    if (v.type === "video") {
+      mediaHtml += `<div class="read-video-wrap"><video src="${escHtml(v.url)}" controls></video></div>`;
+    } else {
+      const embedUrl = getEmbedUrl(v.url);
+      mediaHtml += `<div class="read-video-wrap"><iframe src="${escHtml(embedUrl)}" allowfullscreen></iframe></div>`;
+    }
+  });
+
+  document.getElementById("readContent").innerHTML = `
+    ${c.coverUrl
+      ? `<img class="read-cover" src="${escHtml(c.coverUrl)}" />`
+      : `<div class="read-cover-placeholder">${getEmoji(c.name)}</div>`}
+    <div class="read-content">
+      <div class="read-eyebrow">IBPES Class of 2005</div>
+      <div class="read-name">${escHtml(c.name)}</div>
+      ${c.tagline ? `<div class="read-tagline">${escHtml(c.tagline)}</div>` : ""}
+      <div class="read-meta">
+        <span>${wordCount} words</span>
+        <span>${mins} min read</span>
+      </div>
+      <div class="read-body">${c.content || ""}</div>
+      ${mediaHtml}
+      <div class="read-footer">
+        <div class="read-footer-text">Part of the IBPES Class of 2005 story collection</div>
+        <button class="btn-read-wa" onclick="shareChapter()">📲 Share in WhatsApp</button>
+      </div>
+    </div>`;
+}
+
+function shareChapter() {
+  const url = `${window.location.origin}${window.location.pathname}?read=${currentReadId}`;
+  const text = `Read this — one of our batchmates wrote their full story 📖\n\n${url}\n\nWe're all writing ours on the IBPES 2005 journal. Add yours too!`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+}
+
+function getEmbedUrl(url) {
+  if (url.includes("youtube.com/watch")) return url.replace("watch?v=", "embed/");
+  if (url.includes("youtu.be/")) return "https://www.youtube.com/embed/" + url.split("youtu.be/")[1];
+  if (url.includes("vimeo.com/")) return "https://player.vimeo.com/video/" + url.split("vimeo.com/")[1];
+  return url;
+}
+
+// ── CLOUDINARY UPLOAD ─────────────────────────────────────────────
+async function uploadToCloudinary(file, folder) {
+  const prog = document.getElementById("uploadProgress");
+  const fill = document.getElementById("uploadFill");
+  prog.style.display = "block";
+  fill.style.width = "0%";
+
+  return new Promise((resolve) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", CLOUDINARY_PRESET);
+    fd.append("folder", "ibpes-stories/" + folder);
+
+    const xhr = new XMLHttpRequest();
+    const resourceType = file.type && file.type.startsWith("video/") ? "video" : "image";
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${resourceType}/upload`);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) fill.style.width = Math.round(e.loaded/e.total*100) + "%";
+    };
+    xhr.onload = () => {
+      prog.style.display = "none";
+      if (xhr.status === 200) {
+        resolve(JSON.parse(xhr.responseText).secure_url);
+      } else {
+        showToast("Upload failed — try again");
+        resolve(null);
+      }
+    };
+    xhr.onerror = () => { prog.style.display = "none"; showToast("Network error"); resolve(null); };
+    xhr.send(fd);
+  });
+}
+
+// ── IMAGE COMPRESSION ─────────────────────────────────────────────
+function compressImage(file, maxDim, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const r = Math.min(maxDim/w, maxDim/h);
+        w = Math.round(w*r); h = Math.round(h*r);
+      }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      c.toBlob(b => resolve(b), "image/jpeg", quality);
+    };
+    img.src = url;
+  });
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function stripHtml(html) {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+// ── START ─────────────────────────────────────────────────────────
+route();
+loadChapters();
+</script>
+</body>
+</html>
