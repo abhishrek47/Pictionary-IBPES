@@ -709,34 +709,50 @@ async function createChapter() {
   const tagline = document.getElementById("startTagline").value.trim();
   if (!name || !selectedStructure) return;
 
+  const btn = document.getElementById("btnStartChapter");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+
   const chapterId = "ch_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
   const editToken = "tok_" + Math.random().toString(36).substr(2, 16);
+  const content   = selectedStructure === "guided" ? GUIDED_TEMPLATE : "";
 
-  const content = selectedStructure === "guided" ? GUIDED_TEMPLATE : "";
-
-  await db.ref("ibpes-stories/" + chapterId).set({
-    name, tagline, content,
-    editToken, status: "draft",
-    coverUrl: "", wordCount: 0,
-    media: [],
-    createdAt: firebase.database.ServerValue.TIMESTAMP,
-    updatedAt: firebase.database.ServerValue.TIMESTAMP
-  });
-
-  document.getElementById("startModal").classList.remove("show");
-
-  // Save tokens locally
   try {
-    const myChapters = JSON.parse(localStorage.getItem("ibpes_my_chapters") || "{}");
-    myChapters[chapterId] = editToken;
-    localStorage.setItem("ibpes_my_chapters", JSON.stringify(myChapters));
-  } catch(e) {}
+    await db.ref("ibpes-stories/" + chapterId).set({
+      name, tagline, content,
+      editToken, status: "draft",
+      coverUrl: "", wordCount: 0,
+      media: [],
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
 
-  currentChapterId = chapterId;
-  currentEditToken = editToken;
-  openEditor({ name, tagline, content, coverUrl:"", media:[] });
-  history.replaceState({}, "", `?write=${editToken}`);
-  showToast("Chapter created! Bookmark this page URL to come back and edit.");
+    document.getElementById("startModal").classList.remove("show");
+
+    try {
+      const myChapters = JSON.parse(localStorage.getItem("ibpes_my_chapters") || "{}");
+      myChapters[chapterId] = editToken;
+      localStorage.setItem("ibpes_my_chapters", JSON.stringify(myChapters));
+    } catch(e) {}
+
+    currentChapterId = chapterId;
+    currentEditToken = editToken;
+    mediaItems = [];
+    openEditor({ name, tagline, content, coverUrl: "", media: [] });
+    history.replaceState({}, "", `?write=${editToken}`);
+    showToast("Chapter created! Bookmark this page URL.");
+
+  } catch(err) {
+    console.error("Firebase write failed:", err);
+    btn.disabled = false;
+    btn.textContent = "Open my editor →";
+    if (err.message && err.message.includes("PERMISSION_DENIED")) {
+      showToast("❌ Firebase rules need updating — see instructions");
+      alert("Firebase permission denied.\n\nGo to Firebase Console → pictionary-2005 → Realtime Database → Rules\n\nAdd this under the existing rules:\n\n\"ibpes-stories\": {\n  \".read\": true,\n  \".write\": true\n}\n\nThen click Publish and try again.");
+    } else {
+      showToast("❌ Failed — check internet and try again");
+    }
+  }
 }
 
 // ── EDITOR ────────────────────────────────────────────────────────
