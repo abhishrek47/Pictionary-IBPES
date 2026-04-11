@@ -640,6 +640,14 @@ function closeModal(e) {
 }
 function closeModalDirect() {
   document.getElementById("modal").classList.remove("show");
+  // Reset btnSave to default state
+  const btn = document.getElementById("btnSave");
+  btn.style.display = "";
+  btn.onclick = savePerson;
+  btn.textContent = isEditMode ? "Update Profile" : "Save to Directory";
+  // Hide shareAfterAdd if present
+  const share = document.getElementById("shareAfterAdd");
+  if (share) share.style.display = "none";
   hideRecovery();
 }
 
@@ -684,7 +692,9 @@ async function savePerson() {
     if (isEditMode && editingId) {
       // Update existing
       await db.ref("ibpes-directory/people/" + editingId).update(data);
+      closeModalDirect();
       showToast("Profile updated ✓");
+      return;
     } else {
       // Create new
       const id    = "d_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
@@ -697,12 +707,11 @@ async function savePerson() {
       myEditToken = token;
       try { localStorage.setItem("ibpes_dir_me", JSON.stringify({ id, token })); } catch(e){}
 
-      // Show edit link
+      // Show edit link — do NOT call closeModalDirect after this
       const editUrl = `${location.origin}${location.pathname}?edit=${token}`;
-      closeModalDirect();
       showEditLinkModal(editUrl);
+      return;
     }
-    closeModalDirect();
   } catch(err) {
     console.error(err);
     showToast(err.message?.includes("PERMISSION_DENIED")
@@ -729,7 +738,6 @@ async function deletePerson() {
 
 // ── EDIT LINK MODAL ───────────────────────────────────────────────
 function showEditLinkModal(editUrl) {
-  // Reuse modal to show success + edit link
   document.getElementById("modalTitle").textContent = "You're in the directory! 🎉";
   document.getElementById("modalSub").innerHTML = `
     <strong style="color:var(--linen);">Save this edit link</strong> — you'll need it to update your links later.<br><br>
@@ -741,11 +749,24 @@ function showEditLinkModal(editUrl) {
       <span style="position:absolute;top:50%;right:10px;transform:translateY(-50%);
         font-size:9px;font-weight:800;letter-spacing:1px;color:var(--terra);">TAP TO COPY</span>
     </div>`;
-  document.getElementById("btnSave").textContent = "Share directory in WhatsApp";
-  document.getElementById("btnSave").disabled = false;
-  document.getElementById("btnSave").onclick = shareDirectory;
+  // Hide the main form fields and buttons
+  document.getElementById("btnSave").style.display   = "none";
   document.getElementById("btnDelete").style.display = "none";
   document.getElementById("modalNote").style.display = "none";
+  document.getElementById("recoveryToggle").style.display = "none";
+  // Show a separate share button
+  const existing = document.getElementById("shareAfterAdd");
+  if (!existing) {
+    const btn = document.createElement("button");
+    btn.id = "shareAfterAdd";
+    btn.className = "btn-primary";
+    btn.style.marginTop = "8px";
+    btn.textContent = "📲 Share directory in WhatsApp";
+    btn.onclick = shareDirectory;
+    document.getElementById("modalSub").after(btn);
+  } else {
+    existing.style.display = "block";
+  }
   document.getElementById("modal").classList.add("show");
 }
 
