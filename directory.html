@@ -1,0 +1,765 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IBPES Class of 2005 — Social Directory</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1e3a5f;--navy-dark:#162d4a;--terra:#c0392b;
+  --gold:#f0c040;--linen:#f5f0eb;--mint:#3dd68c;
+  --bg:#0f1923;--card:#1a2535;--card2:#1e2d40;
+  --border:rgba(255,255,255,0.08);--text:#f5f0eb;
+  --muted:rgba(245,240,235,0.5);
+  /* Social brand colours */
+  --ig:#e1306c;--li:#0077b5;--fb:#1877f2;--tw:#000000;--wa:#25d366;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── TOP NAV ── */
+.topnav{
+  background:var(--navy);border-bottom:2px solid var(--terra);
+  padding:14px 20px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.brand{font-family:'Playfair Display',serif;font-size:18px;color:var(--linen);}
+.brand span{color:var(--gold);}
+.btn-add{
+  padding:9px 18px;border-radius:9px;border:none;
+  background:var(--terra);color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+
+/* ── HERO ── */
+.hero{
+  background:linear-gradient(160deg,var(--navy-dark),#0f1923);
+  border-bottom:1px solid var(--border);
+  padding:40px 20px 32px;text-align:center;
+}
+.hero-eyebrow{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--terra);font-weight:700;margin-bottom:14px;
+}
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(26px,5vw,40px);
+  color:var(--linen);line-height:1.2;margin-bottom:10px;
+}
+.hero-sub{
+  font-size:14px;color:var(--muted);
+  max-width:480px;margin:0 auto 24px;line-height:1.7;
+}
+.hero-stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.stat-pill{
+  background:rgba(255,255,255,0.05);border:1px solid var(--border);
+  border-radius:20px;padding:5px 16px;
+  font-size:12px;font-weight:700;color:var(--muted);
+}
+.stat-pill span{color:var(--gold);}
+
+/* ── SEARCH ── */
+.search-wrap{
+  max-width:680px;margin:0 auto;padding:20px 16px 0;
+}
+.search-input{
+  width:100%;padding:13px 18px 13px 44px;
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--linen);
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;
+  outline:none;transition:border-color 0.2s;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8' stroke='rgba(245,240,235,0.3)' stroke-width='2'/%3E%3Cpath d='m21 21-4.35-4.35' stroke='rgba(245,240,235,0.3)' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:14px center;
+}
+.search-input:focus{border-color:var(--terra);}
+.search-input::placeholder{color:var(--muted);}
+
+/* ── DIRECTORY GRID ── */
+.directory-wrap{
+  max-width:900px;margin:0 auto;
+  padding:20px 16px 80px;
+}
+.dir-count{
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;margin-bottom:16px;
+}
+.dir-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:12px;
+}
+@media(max-width:360px){.dir-grid{grid-template-columns:1fr;}}
+
+/* ── PERSON CARD ── */
+.person-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:18px 18px 14px;
+  transition:transform 0.2s,box-shadow 0.2s;
+  position:relative;
+}
+.person-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3);}
+.person-card.mine{border-color:rgba(192,57,43,0.4);}
+.card-avatar{
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,var(--navy),var(--terra));
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:800;color:#fff;
+  margin-bottom:12px;flex-shrink:0;
+  font-family:'DM Sans',sans-serif;
+}
+.card-name{
+  font-family:'Playfair Display',serif;
+  font-size:17px;font-weight:700;color:var(--linen);
+  margin-bottom:3px;line-height:1.2;
+}
+.card-city{
+  font-size:12px;color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;gap:4px;
+}
+.card-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.social-btn{
+  width:36px;height:36px;border-radius:9px;border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:transform 0.15s,opacity 0.15s;text-decoration:none;
+  flex-shrink:0;
+}
+.social-btn:hover{transform:scale(1.12);opacity:0.9;}
+.social-btn svg{width:18px;height:18px;}
+.btn-ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af);}
+.btn-li{background:var(--li);}
+.btn-fb{background:var(--fb);}
+.btn-tw{background:var(--tw);}
+.btn-wa{background:var(--wa);}
+.btn-edit-card{
+  position:absolute;top:12px;right:12px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:7px;padding:4px 10px;
+  font-size:11px;font-weight:700;color:var(--muted);
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  text-decoration:none;transition:all 0.15s;
+}
+.btn-edit-card:hover{color:var(--linen);border-color:rgba(255,255,255,0.2);}
+.no-links{font-size:12px;color:rgba(245,240,235,0.25);font-style:italic;}
+
+/* ── EMPTY / LOADING ── */
+.state-box{text-align:center;padding:60px 20px;grid-column:1/-1;}
+.state-icon{font-size:48px;margin-bottom:14px;}
+.state-title{font-size:18px;font-weight:700;color:var(--linen);margin-bottom:8px;}
+.state-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.spinner{
+  width:28px;height:28px;border:2px solid rgba(255,255,255,0.08);
+  border-top-color:var(--terra);border-radius:50%;
+  animation:spin 0.8s linear infinite;margin:0 auto 14px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:500;backdrop-filter:blur(8px);
+}
+.modal-bg.show{display:flex;}
+.modal{
+  background:var(--card);border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;
+  max-height:92vh;overflow-y:auto;
+}
+.modal-drag{width:40px;height:4px;background:rgba(255,255,255,0.12);
+  border-radius:2px;margin:10px auto 20px;}
+.modal-body{padding:0 24px 40px;}
+.modal-title{
+  font-family:'Playfair Display',serif;
+  font-size:22px;color:var(--linen);margin-bottom:6px;
+}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.field{margin-bottom:14px;}
+.field label{
+  display:block;font-size:10px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:7px;
+}
+.field-with-icon{position:relative;}
+.field-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;pointer-events:none;
+}
+.field input{
+  width:100%;padding:12px 14px 12px 40px;
+  background:var(--card2);border:1.5px solid var(--border);
+  border-radius:10px;color:var(--linen);
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;
+  outline:none;transition:border-color 0.2s;
+}
+.field input.no-icon{padding-left:14px;}
+.field input:focus{border-color:var(--terra);}
+.field input::placeholder{color:rgba(245,240,235,0.2);}
+.field-hint{font-size:11px;color:rgba(245,240,235,0.25);margin-top:5px;}
+.btn-primary{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--navy),var(--terra));
+  color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:15px;font-weight:800;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 4px 16px rgba(192,57,43,0.25);min-height:50px;
+  margin-bottom:10px;
+}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-secondary{
+  width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;
+  background:transparent;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.modal-note{
+  font-size:11px;color:var(--muted);text-align:center;
+  margin-top:12px;line-height:1.6;
+}
+.modal-note strong{color:var(--gold);}
+.divider-line{
+  height:1px;background:var(--border);margin:18px 0;
+}
+
+/* ── EDIT BANNER (when in edit mode) ── */
+.edit-banner{
+  background:rgba(192,57,43,0.12);border-bottom:1px solid rgba(192,57,43,0.3);
+  padding:10px 20px;text-align:center;display:none;
+}
+.edit-banner.show{display:block;}
+.edit-banner-text{font-size:13px;color:rgba(245,240,235,0.8);line-height:1.5;}
+.edit-banner-text strong{color:var(--terra);}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--navy);color:var(--linen);
+  border:1px solid var(--terra);padding:11px 20px;
+  border-radius:28px;font-size:13px;font-weight:700;
+  z-index:9999;opacity:0;transition:all 0.3s;
+  pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@supports(padding:env(safe-area-inset-bottom)){
+  .topnav{padding-top:max(14px,env(safe-area-inset-top));}
+  body{padding-bottom:env(safe-area-inset-bottom);}
+}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="brand">IBPES <span>2005</span></div>
+  <button class="btn-add" onclick="openAddModal()">+ Add My Links</button>
+</nav>
+
+<!-- EDIT MODE BANNER -->
+<div class="edit-banner" id="editBanner">
+  <div class="edit-banner-text">
+    <strong>Editing your profile.</strong> Update your links and hit Save.
+    <a href="javascript:void(0)" onclick="clearEditMode()" style="color:var(--muted);margin-left:8px;text-decoration:underline;font-size:12px;">Done editing</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">IBPES Class of 2005</div>
+  <div class="hero-title">Find your batchmates online 🔗</div>
+  <div class="hero-sub">Everyone's scattered across the world. Add your social links once — your batch finds you forever. No scrolling through WhatsApp.</div>
+  <div class="hero-stats">
+    <div class="stat-pill"><span id="statPeople">0</span> people added</div>
+    <div class="stat-pill"><span id="statLinks">0</span> links shared</div>
+    <div class="stat-pill">IBPES · 2005</div>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <input class="search-input" id="searchInput" type="text"
+    placeholder="Search by name or city..." oninput="filterDirectory()" />
+</div>
+
+<!-- DIRECTORY -->
+<div class="directory-wrap">
+  <div class="dir-count" id="dirCount"></div>
+  <div class="dir-grid" id="dirGrid">
+    <div class="state-box">
+      <div class="spinner"></div>
+      <div class="state-sub">Loading directory...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-bg" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-body">
+      <div class="modal-title" id="modalTitle">Add your links 🔗</div>
+      <div class="modal-sub" id="modalSub">Add whichever social profiles you want to share. Everything is optional except your name.</div>
+
+      <div class="field">
+        <label>Your Name *</label>
+        <input type="text" class="no-icon" id="fieldName"
+          placeholder="e.g. Priya Patel (Surat)" maxlength="60"
+          oninput="checkFormReady()" />
+      </div>
+
+      <div class="field">
+        <label>City / Where you are now</label>
+        <input type="text" class="no-icon" id="fieldCity"
+          placeholder="e.g. Mumbai, Dubai, Toronto" maxlength="60" />
+      </div>
+
+      <div class="divider-line"></div>
+
+      <div class="field">
+        <label>Instagram</label>
+        <div class="field-with-icon">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="#e1306c" stroke-width="1.8"/>
+            <circle cx="12" cy="12" r="4" stroke="#e1306c" stroke-width="1.8"/>
+            <circle cx="17.5" cy="6.5" r="1" fill="#e1306c"/>
+          </svg>
+          <input type="url" id="fieldIG"
+            placeholder="https://instagram.com/yourhandle" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>LinkedIn</label>
+        <div class="field-with-icon">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="#0077b5">
+            <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+            <circle cx="4" cy="4" r="2" fill="#0077b5"/>
+          </svg>
+          <input type="url" id="fieldLI"
+            placeholder="https://linkedin.com/in/yourprofile" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Facebook</label>
+        <div class="field-with-icon">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="#1877f2">
+            <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+          </svg>
+          <input type="url" id="fieldFB"
+            placeholder="https://facebook.com/yourprofile" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Twitter / X</label>
+        <div class="field-with-icon">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="white">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          <input type="url" id="fieldTW"
+            placeholder="https://x.com/yourhandle" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>WhatsApp Number</label>
+        <div class="field-with-icon">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="#25d366">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M11.892 21.75A9.75 9.75 0 012.25 12 9.75 9.75 0 0112 2.25 9.75 9.75 0 0121.75 12a9.75 9.75 0 01-9.858 9.75zm8.042-8.896l.002-.004-.002.004z" stroke="#25d366" stroke-width="1.2" fill="none"/>
+          </svg>
+          <input type="tel" id="fieldWA"
+            placeholder="91XXXXXXXXXX (with country code, no +)" />
+        </div>
+        <div class="field-hint">Just the number — we'll create the WhatsApp link. No + sign.</div>
+      </div>
+
+      <button class="btn-primary" id="btnSave" onclick="savePerson()" disabled>
+        Save to Directory
+      </button>
+      <button class="btn-secondary" id="btnDelete" onclick="deletePerson()" style="display:none;color:rgba(192,57,43,0.7);">
+        Remove my profile
+      </button>
+
+      <div class="modal-note" id="modalNote">
+        You'll get a <strong>private edit link</strong> — save it to update your links anytime.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD6OgzIwlRzW7GJycQnEkdlS6tt_-CZaYA",
+  authDomain: "pictionary-2005.firebaseapp.com",
+  databaseURL: "https://pictionary-2005-default-rtdb.firebaseio.com",
+  projectId: "pictionary-2005"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+const peopleRef = db.ref("ibpes-directory/people");
+
+// ── STATE ─────────────────────────────────────────────────────────
+let allPeople = {};         // id → person data
+let myPersonId  = null;     // my entry id
+let myEditToken = null;     // my private token
+let editingId   = null;     // id being edited
+let isEditMode  = false;
+
+// Load from localStorage
+try {
+  const saved = JSON.parse(localStorage.getItem("ibpes_dir_me") || "{}");
+  myPersonId  = saved.id    || null;
+  myEditToken = saved.token || null;
+} catch(e) {}
+
+// ── INIT ──────────────────────────────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const editToken = urlParams.get("edit");
+if (editToken) openEditByToken(editToken);
+
+// Load directory
+peopleRef.once("value").then(snap => {
+  allPeople = snap.val() || {};
+  renderDirectory(allPeople);
+  updateStats(allPeople);
+  // Live listener for updates
+  peopleRef.on("value", snap => {
+    allPeople = snap.val() || {};
+    renderDirectory(allPeople);
+    updateStats(allPeople);
+  });
+}).catch(() => {
+  setTimeout(() => renderDirectory({}), 5000);
+});
+
+// ── STATS ─────────────────────────────────────────────────────────
+function updateStats(data) {
+  const people = Object.values(data).filter(p => p && p.name);
+  let linkCount = 0;
+  people.forEach(p => {
+    if (p.ig) linkCount++;
+    if (p.li) linkCount++;
+    if (p.fb) linkCount++;
+    if (p.tw) linkCount++;
+    if (p.wa) linkCount++;
+  });
+  document.getElementById("statPeople").textContent = people.length;
+  document.getElementById("statLinks").textContent  = linkCount;
+}
+
+// ── RENDER DIRECTORY ──────────────────────────────────────────────
+function renderDirectory(data, filter) {
+  const grid = document.getElementById("dirGrid");
+  const countEl = document.getElementById("dirCount");
+
+  let people = Object.entries(data)
+    .filter(([, p]) => p && p.name)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  // Apply search filter
+  if (filter) {
+    const q = filter.toLowerCase();
+    people = people.filter(([, p]) =>
+      p.name.toLowerCase().includes(q) ||
+      (p.city || "").toLowerCase().includes(q)
+    );
+  }
+
+  countEl.textContent = people.length
+    ? `${people.length} member${people.length !== 1 ? "s" : ""}`
+    : "";
+
+  if (!people.length) {
+    grid.innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">${filter ? "🔍" : "👥"}</div>
+        <div class="state-title">${filter ? "Nobody found" : "Directory is empty"}</div>
+        <div class="state-sub">${filter
+          ? `No results for "${escHtml(filter)}". Try a different name.`
+          : "Be the first one to add your social links."}</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = "";
+  people.forEach(([id, p]) => {
+    const isMine = id === myPersonId;
+    const initials = getInitials(p.name);
+    const linkCount = [p.ig,p.li,p.fb,p.tw,p.wa].filter(Boolean).length;
+
+    const card = document.createElement("div");
+    card.className = "person-card" + (isMine ? " mine" : "");
+
+    card.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:2px;">
+        <div class="card-avatar">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="card-name">${escHtml(p.name)}</div>
+          ${p.city ? `<div class="card-city">📍 ${escHtml(p.city)}</div>` : '<div style="height:19px;"></div>'}
+        </div>
+      </div>
+      <div class="card-links">
+        ${p.ig ? `<a class="social-btn btn-ig" href="${escHtml(p.ig)}" target="_blank" rel="noopener" title="Instagram">${svgIG()}</a>` : ""}
+        ${p.li ? `<a class="social-btn btn-li" href="${escHtml(p.li)}" target="_blank" rel="noopener" title="LinkedIn">${svgLI()}</a>` : ""}
+        ${p.fb ? `<a class="social-btn btn-fb" href="${escHtml(p.fb)}" target="_blank" rel="noopener" title="Facebook">${svgFB()}</a>` : ""}
+        ${p.tw ? `<a class="social-btn btn-tw" href="${escHtml(p.tw)}" target="_blank" rel="noopener" title="X / Twitter">${svgTW()}</a>` : ""}
+        ${p.wa ? `<a class="social-btn btn-wa" href="https://wa.me/${escHtml(p.wa)}" target="_blank" rel="noopener" title="WhatsApp">${svgWA()}</a>` : ""}
+        ${!linkCount ? `<span class="no-links">No links yet</span>` : ""}
+      </div>
+      ${isMine ? `<a class="btn-edit-card" onclick="openEditMyProfile(event)">Edit</a>` : ""}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function filterDirectory() {
+  const q = document.getElementById("searchInput").value.trim();
+  renderDirectory(allPeople, q || null);
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────
+function openAddModal() {
+  // If user already has a profile, open edit mode
+  if (myPersonId && allPeople[myPersonId]) {
+    openEditMyProfile();
+    return;
+  }
+  editingId = null;
+  isEditMode = false;
+  resetForm();
+  document.getElementById("modalTitle").textContent = "Add your links 🔗";
+  document.getElementById("modalSub").textContent   = "Add whichever social profiles you want to share. Everything optional except your name.";
+  document.getElementById("btnSave").textContent    = "Save to Directory";
+  document.getElementById("btnDelete").style.display = "none";
+  document.getElementById("modalNote").style.display = "block";
+  document.getElementById("modal").classList.add("show");
+}
+
+function openEditMyProfile(e) {
+  if (e) e.stopPropagation();
+  if (!myPersonId || !allPeople[myPersonId]) { openAddModal(); return; }
+  const p = allPeople[myPersonId];
+  editingId = myPersonId;
+  isEditMode = true;
+  resetForm();
+  document.getElementById("fieldName").value = p.name || "";
+  document.getElementById("fieldCity").value = p.city || "";
+  document.getElementById("fieldIG").value   = p.ig   || "";
+  document.getElementById("fieldLI").value   = p.li   || "";
+  document.getElementById("fieldFB").value   = p.fb   || "";
+  document.getElementById("fieldTW").value   = p.tw   || "";
+  document.getElementById("fieldWA").value   = p.wa   || "";
+  document.getElementById("modalTitle").textContent = "Edit your profile ✏️";
+  document.getElementById("modalSub").textContent   = "Update your links and save.";
+  document.getElementById("btnSave").textContent    = "Update Profile";
+  document.getElementById("btnSave").disabled       = false;
+  document.getElementById("btnDelete").style.display = "block";
+  document.getElementById("modalNote").style.display = "none";
+  document.getElementById("modal").classList.add("show");
+}
+
+function openEditByToken(token) {
+  // Find person by token and open edit
+  peopleRef.orderByChild("editToken").equalTo(token).once("value").then(snap => {
+    const data = snap.val();
+    if (!data) { showToast("Profile not found"); return; }
+    const [id, p] = Object.entries(data)[0];
+    myPersonId  = id;
+    myEditToken = token;
+    try { localStorage.setItem("ibpes_dir_me", JSON.stringify({ id, token })); } catch(e){}
+    openEditMyProfile();
+    document.getElementById("editBanner").classList.add("show");
+    history.replaceState({}, "", window.location.pathname);
+  });
+}
+
+function clearEditMode() {
+  document.getElementById("editBanner").classList.remove("show");
+  closeModalDirect();
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById("modal")) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById("modal").classList.remove("show");
+}
+
+function resetForm() {
+  ["fieldName","fieldCity","fieldIG","fieldLI","fieldFB","fieldTW","fieldWA"]
+    .forEach(id => { document.getElementById(id).value = ""; });
+  document.getElementById("btnSave").disabled = true;
+}
+
+function checkFormReady() {
+  const name = document.getElementById("fieldName").value.trim();
+  document.getElementById("btnSave").disabled = !name;
+}
+
+// ── SAVE ──────────────────────────────────────────────────────────
+async function savePerson() {
+  const name = document.getElementById("fieldName").value.trim();
+  if (!name) return;
+
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true;
+  btn.textContent = isEditMode ? "Updating..." : "Saving...";
+
+  const wa = document.getElementById("fieldWA").value.trim().replace(/\D/g, "");
+  const data = {
+    name,
+    city: document.getElementById("fieldCity").value.trim(),
+    ig:   normaliseUrl(document.getElementById("fieldIG").value.trim()),
+    li:   normaliseUrl(document.getElementById("fieldLI").value.trim()),
+    fb:   normaliseUrl(document.getElementById("fieldFB").value.trim()),
+    tw:   normaliseUrl(document.getElementById("fieldTW").value.trim()),
+    wa:   wa || "",
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+
+  try {
+    if (isEditMode && editingId) {
+      // Update existing
+      await db.ref("ibpes-directory/people/" + editingId).update(data);
+      showToast("Profile updated ✓");
+    } else {
+      // Create new
+      const id    = "d_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+      const token = "tok_" + Math.random().toString(36).substr(2, 16);
+      data.editToken = token;
+      data.createdAt = firebase.database.ServerValue.TIMESTAMP;
+      await db.ref("ibpes-directory/people/" + id).set(data);
+
+      myPersonId  = id;
+      myEditToken = token;
+      try { localStorage.setItem("ibpes_dir_me", JSON.stringify({ id, token })); } catch(e){}
+
+      // Show edit link
+      const editUrl = `${location.origin}${location.pathname}?edit=${token}`;
+      closeModalDirect();
+      showEditLinkModal(editUrl);
+    }
+    closeModalDirect();
+  } catch(err) {
+    console.error(err);
+    showToast(err.message?.includes("PERMISSION_DENIED")
+      ? "❌ Firebase rules need ibpes-directory — add it and retry"
+      : "❌ Save failed — check connection");
+    btn.disabled = false;
+    btn.textContent = isEditMode ? "Update Profile" : "Save to Directory";
+  }
+}
+
+async function deletePerson() {
+  if (!editingId) return;
+  if (!confirm("Remove your profile from the directory?")) return;
+  try {
+    await db.ref("ibpes-directory/people/" + editingId).remove();
+    myPersonId = null; myEditToken = null;
+    try { localStorage.removeItem("ibpes_dir_me"); } catch(e){}
+    closeModalDirect();
+    showToast("Profile removed");
+  } catch(err) {
+    showToast("❌ Delete failed");
+  }
+}
+
+// ── EDIT LINK MODAL ───────────────────────────────────────────────
+function showEditLinkModal(editUrl) {
+  // Reuse modal to show success + edit link
+  document.getElementById("modalTitle").textContent = "You're in the directory! 🎉";
+  document.getElementById("modalSub").innerHTML = `
+    <strong style="color:var(--linen);">Save this edit link</strong> — you'll need it to update your links later.<br><br>
+    <div onclick="copyEditLink('${escHtml(editUrl)}')" style="
+      background:var(--card2);border:1px solid var(--border);border-radius:10px;
+      padding:12px 14px;font-size:12px;color:var(--muted);
+      word-break:break-all;cursor:pointer;position:relative;margin-bottom:4px;">
+      ${escHtml(editUrl)}
+      <span style="position:absolute;top:50%;right:10px;transform:translateY(-50%);
+        font-size:9px;font-weight:800;letter-spacing:1px;color:var(--terra);">TAP TO COPY</span>
+    </div>`;
+  document.getElementById("btnSave").textContent = "Share directory in WhatsApp";
+  document.getElementById("btnSave").disabled = false;
+  document.getElementById("btnSave").onclick = shareDirectory;
+  document.getElementById("btnDelete").style.display = "none";
+  document.getElementById("modalNote").style.display = "none";
+  document.getElementById("modal").classList.add("show");
+}
+
+function copyEditLink(url) {
+  navigator.clipboard?.writeText(url).then(() => showToast("Edit link copied! Save it 📋"));
+}
+
+function shareDirectory() {
+  const url = `${location.origin}${location.pathname}`;
+  const text = `Added myself to our IBPES 2005 social directory 🔗\n\nFind everyone's Instagram, LinkedIn and more here:\n${url}\n\nAdd your links too — takes 2 minutes!`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  closeModalDirect();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function normaliseUrl(url) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return "https://" + url;
+}
+
+function getInitials(name) {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+let toastT;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+// ── SVG ICONS ─────────────────────────────────────────────────────
+function svgIG() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+    <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/>
+    <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none"/></svg>`;
+}
+function svgLI() {
+  return `<svg viewBox="0 0 24 24" fill="white">
+    <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+    <circle cx="4" cy="4" r="2"/></svg>`;
+}
+function svgFB() {
+  return `<svg viewBox="0 0 24 24" fill="white">
+    <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>`;
+}
+function svgTW() {
+  return `<svg viewBox="0 0 24 24" fill="white">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+}
+function svgWA() {
+  return `<svg viewBox="0 0 24 24" fill="white">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a10.9 10.9 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 21.75A9.75 9.75 0 012.25 12 9.75 9.75 0 0112 2.25 9.75 9.75 0 0121.75 12 9.75 9.75 0 0112 21.75z" stroke="none"/></svg>`;
+}
+</script>
+</body>
+</html>
