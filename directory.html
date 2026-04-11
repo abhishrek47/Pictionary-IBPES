@@ -94,6 +94,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
   gap:12px;
 }
+@media(min-width:600px){.dir-grid{grid-template-columns:repeat(2,1fr);}}
+@media(min-width:860px){.dir-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:1100px){.dir-grid{grid-template-columns:repeat(4,1fr);}}
 @media(max-width:360px){.dir-grid{grid-template-columns:1fr;}}
 
 /* ── PERSON CARD ── */
@@ -278,7 +281,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="hero-title">Find your batchmates online 🔗</div>
   <div class="hero-sub">Everyone's scattered across the world. Add your social links once — your batch finds you forever. No scrolling through WhatsApp.</div>
   <div class="hero-stats">
-    <div class="stat-pill"><span id="statPeople">0</span> people added</div>
+    <div class="stat-pill"><span id="statPeople">0</span> <span id="statPeopleLabel">people added</span></div>
     <div class="stat-pill"><span id="statLinks">0</span> links shared</div>
     <div class="stat-pill">IBPES · 2005</div>
   </div>
@@ -459,6 +462,7 @@ function updateStats(data) {
     if (p.wa) linkCount++;
   });
   document.getElementById("statPeople").textContent = people.length;
+  document.getElementById("statPeopleLabel").textContent = people.length === 1 ? "person added" : "people added";
   document.getElementById("statLinks").textContent  = linkCount;
 }
 
