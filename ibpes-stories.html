@@ -188,10 +188,50 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;
 }
 .btn-save:hover{color:var(--linen);border-color:rgba(255,255,255,0.3);}
+.btn-discard{
+  padding:8px 14px;border-radius:8px;border:1px solid rgba(192,57,43,0.3);
+  background:transparent;color:rgba(192,57,43,0.7);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.15s;
+}
+.btn-discard:hover{background:rgba(192,57,43,0.1);color:var(--terra);border-color:var(--terra);}
 .btn-publish{
   padding:8px 18px;border-radius:8px;border:none;
   background:var(--terra);color:#fff;
   font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+
+/* Discard confirm overlay */
+.discard-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);
+  display:none;align-items:center;justify-content:center;
+  z-index:600;backdrop-filter:blur(8px);padding:20px;
+}
+.discard-overlay.show{display:flex;}
+.discard-card{
+  background:var(--card);border:1.5px solid rgba(192,57,43,0.4);
+  border-radius:20px;padding:32px 28px;
+  max-width:360px;width:100%;text-align:center;
+}
+.discard-icon{font-size:40px;margin-bottom:14px;}
+.discard-title{
+  font-family:'Playfair Display',serif;
+  font-size:22px;color:var(--linen);margin-bottom:10px;
+}
+.discard-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+.discard-actions{display:flex;gap:10px;}
+.btn-discard-cancel{
+  flex:1;padding:13px;border-radius:12px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--linen);font-family:'DM Sans',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-discard-confirm{
+  flex:1;padding:13px;border-radius:12px;border:none;
+  background:var(--terra);color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:800;
   cursor:pointer;-webkit-tap-highlight-color:transparent;
 }
 .autosave-indicator{font-size:11px;color:var(--muted);}
@@ -487,6 +527,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="editor-brand">IBPES <span>2005</span></div>
     <div class="editor-actions">
       <div class="autosave-indicator" id="autosaveLabel">All saved</div>
+      <button class="btn-discard" onclick="confirmDiscard()">✕ Discard</button>
       <button class="btn-save" onclick="saveChapter()">Save</button>
       <button class="btn-publish" onclick="publishChapter()">Publish ✓</button>
     </div>
@@ -543,6 +584,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div id="readContent"></div>
 </div>
 
+<!-- ══ DISCARD CONFIRM ══ -->
+<div class="discard-overlay" id="discardOverlay">
+  <div class="discard-card">
+    <div class="discard-icon">🗑️</div>
+    <div class="discard-title">Discard this chapter?</div>
+    <div class="discard-sub">This will delete everything you've written and go back to the main page. This cannot be undone.</div>
+    <div class="discard-actions">
+      <button class="btn-discard-cancel" onclick="closeDiscardOverlay()">Keep writing</button>
+      <button class="btn-discard-confirm" onclick="discardChapter()">Yes, discard</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -589,6 +643,37 @@ const GUIDED_TEMPLATE = `
 <h2>One thing I'd tell my 14-year-old self</h2>
 <p><em>You know what it is...</em></p>
 `;
+
+function confirmDiscard() {
+  document.getElementById("discardOverlay").classList.add("show");
+}
+function closeDiscardOverlay() {
+  document.getElementById("discardOverlay").classList.remove("show");
+}
+async function discardChapter() {
+  // Delete from Firebase if chapter was already created
+  if (currentChapterId) {
+    try {
+      await db.ref("ibpes-stories/" + currentChapterId).remove();
+    } catch(e) { console.warn("Delete failed:", e); }
+  }
+  // Remove from localStorage
+  try {
+    const myChapters = JSON.parse(localStorage.getItem("ibpes_my_chapters") || "{}");
+    delete myChapters[currentChapterId];
+    localStorage.setItem("ibpes_my_chapters", JSON.stringify(myChapters));
+  } catch(e) {}
+  // Clear autosave
+  clearInterval(autoSaveTimer);
+  // Reset state
+  currentChapterId = null;
+  currentEditToken = null;
+  mediaItems = [];
+  isDirty = false;
+  closeDiscardOverlay();
+  showLanding();
+  showToast("Chapter discarded");
+}
 
 // ── ROUTING ───────────────────────────────────────────────────────
 function route() {
@@ -944,6 +1029,29 @@ function openReadView(id) {
   db.ref("ibpes-stories/" + id).once("value").then(snap => {
     const c = snap.val();
     if (!c) { showToast("Chapter not found"); showLanding(); return; }
+
+    // Draft guard — don't render unpublished chapters publicly
+    if (c.status !== "published") {
+      document.getElementById("readContent").innerHTML = `
+        <div style="max-width:480px;margin:80px auto;text-align:center;padding:0 24px;">
+          <div style="font-size:56px;margin-bottom:20px;">✍️</div>
+          <div style="font-family:'Playfair Display',serif;font-size:26px;color:var(--navy);margin-bottom:12px;">
+            Still being written
+          </div>
+          <div style="font-size:15px;color:var(--read-muted);line-height:1.7;margin-bottom:28px;">
+            This chapter hasn't been published yet. The author is still working on it — check back soon.
+          </div>
+          <button onclick="showLanding()" style="
+            padding:12px 28px;border-radius:12px;border:none;
+            background:var(--navy);color:var(--linen);
+            font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;
+            cursor:pointer;">
+            ← See all chapters
+          </button>
+        </div>`;
+      return;
+    }
+
     renderReadView(c);
   });
 }
