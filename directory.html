@@ -563,7 +563,18 @@ function renderDirectory(data, filter) {
         ${p.wa ? `<a class="social-btn btn-wa" href="https://wa.me/${escHtml(p.wa)}" target="_blank" rel="noopener" title="WhatsApp">${svgWA()}</a>` : ""}
         ${!linkCount ? `<span class="no-links">No links yet</span>` : ""}
       </div>
-      ${isMine ? `<a class="btn-edit-card" onclick="openEditMyProfile(event)">Edit</a>` : ""}
+      ${isMine ? `
+        <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <button onclick="tellTheGroup('${escHtml(p.name)}')" style="
+            flex:1;padding:8px 12px;border-radius:8px;border:none;
+            background:#25d366;color:#fff;
+            font-family:'DM Sans',sans-serif;font-size:12px;font-weight:800;
+            cursor:pointer;-webkit-tap-highlight-color:transparent;
+            display:flex;align-items:center;justify-content:center;gap:6px;">
+            📲 Tell the group
+          </button>
+          <a class="btn-edit-card" style="margin:0;" onclick="openEditMyProfile(event)">Edit</a>
+        </div>` : ""}
     `;
     grid.appendChild(card);
   });
@@ -772,6 +783,12 @@ function showEditLinkModal(editUrl) {
 
 function copyEditLink(url) {
   navigator.clipboard?.writeText(url).then(() => showToast("Edit link copied! Save it 📋"));
+}
+
+function tellTheGroup(name) {
+  const url = `${location.origin}${location.pathname}`;
+  const text = `Added my social links to our IBPES 2005 directory 🔗\n\nFind me and everyone else here:\n${url}\n\nAdd yours too — takes 2 minutes!`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
 }
 
 function shareDirectory() {
