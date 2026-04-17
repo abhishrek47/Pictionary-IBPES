@@ -606,7 +606,7 @@
   // Update hint text based on device
   document.querySelector('.share-hint').innerHTML = isMobile
     ? 'Tap <strong>Share to WhatsApp</strong> to send your card directly to the reunion group via the share sheet.'
-    : 'On desktop: click <strong>Share to WhatsApp</strong> to download your card and open WhatsApp Web — attach the downloaded image in the chat.';
+    : 'On desktop: click <strong>Share to WhatsApp</strong> — your card is copied to clipboard and WhatsApp Web opens. Just paste it in the group chat with <strong>⌘V</strong>.';
 
   // WhatsApp share
   document.getElementById('btn-whatsapp').addEventListener('click', async function() {
@@ -634,17 +634,15 @@
         }
       }
 
-      // Desktop (or mobile fallback): download + open WhatsApp Web
-      const url = canvas.toDataURL('image/jpeg', 0.92);
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = url;
-      link.click();
-
-      showToast('Downloaded! Opening WhatsApp Web…');
+      // Desktop: copy image to clipboard + open WhatsApp Web
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      showToast('Image copied! Paste it in WhatsApp (⌘V)');
       setTimeout(() => {
         window.open('https://web.whatsapp.com', '_blank');
-      }, 1200);
+      }, 800);
 
     } catch(err) {
       if (err.name !== 'AbortError') showToast('Try downloading and sharing manually.');
