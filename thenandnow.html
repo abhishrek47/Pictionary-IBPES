@@ -538,14 +538,34 @@
     const placeholder = cardSlot.querySelector('.card-photo-placeholder');
     if (placeholder) placeholder.style.display = 'none';
 
-    let cardImg = cardSlot.querySelector('.card-img-real');
-    if (!cardImg) {
-      cardImg = document.createElement('img');
-      cardImg.className = 'card-img-real';
-      cardImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-      cardSlot.insertBefore(cardImg, cardSlot.firstChild);
+    // Draw photo into a canvas to avoid html2canvas object-fit issues
+    let cardCanvas = cardSlot.querySelector('.card-img-real');
+    if (!cardCanvas) {
+      cardCanvas = document.createElement('canvas');
+      cardCanvas.className = 'card-img-real';
+      cardCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;';
+      cardSlot.insertBefore(cardCanvas, cardSlot.firstChild);
     }
-    cardImg.src = dataUrl;
+
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      const slotW = cardSlot.offsetWidth;
+      const slotH = cardSlot.offsetHeight;
+      cardCanvas.width = slotW * 2;
+      cardCanvas.height = slotH * 2;
+      cardCanvas.style.width = slotW + 'px';
+      cardCanvas.style.height = slotH + 'px';
+      const ctx = cardCanvas.getContext('2d');
+
+      // Cover: scale to fill, center crop
+      const scale = Math.max(cardCanvas.width / tmpImg.width, cardCanvas.height / tmpImg.height);
+      const drawW = tmpImg.width * scale;
+      const drawH = tmpImg.height * scale;
+      const offsetX = (cardCanvas.width - drawW) / 2;
+      const offsetY = (cardCanvas.height - drawH) / 2;
+      ctx.drawImage(tmpImg, offsetX, offsetY, drawW, drawH);
+    };
+    tmpImg.src = dataUrl;
 
     updateButtons();
   }
