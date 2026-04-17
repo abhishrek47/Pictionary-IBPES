@@ -450,7 +450,7 @@
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-text">Type your <strong>name</strong> below</div>
+        <div class="step-text">Type your <strong>name</strong> and <strong>where you are now</strong></div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
@@ -474,6 +474,12 @@
   <div class="name-field">
     <label>Your Name</label>
     <input type="text" id="name-input" placeholder="e.g. Rahul Sharma" maxlength="36" />
+  </div>
+
+  <!-- Location -->
+  <div class="name-field">
+    <label>Where are you now?</label>
+    <input type="text" id="location-input" placeholder="e.g. Dubai, UAE" maxlength="32" />
   </div>
 
   <!-- Photo uploads -->
@@ -521,7 +527,7 @@
 
     <div id="export-card">
       <div class="card-header">
-        <div class="card-school">IBPES · Pune</div>
+        <div class="card-school" id="card-location-display">IBPES · Class of 2005</div>
         <div class="card-title-group">
           <div class="card-then-now">Then &amp; <span>Now</span></div>
         </div>
@@ -583,7 +589,7 @@
 <!-- html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-  const state = { then: null, now: null, name: '' };
+  const state = { then: null, now: null, name: '', location: '' };
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -663,11 +669,22 @@
     });
   });
 
+  function updateCardLocation() {
+    const el = document.getElementById('card-location-display');
+    el.textContent = state.location ? 'IBPES · ' + state.location : 'IBPES · Class of 2005';
+  }
+
   // Name handler
   document.getElementById('name-input').addEventListener('input', function() {
     state.name = this.value;
     updateCardName();
     updateButtons();
+  });
+
+  // Location handler
+  document.getElementById('location-input').addEventListener('input', function() {
+    state.location = this.value;
+    updateCardLocation();
   });
 
   // Capture card as canvas
