@@ -373,6 +373,62 @@
     opacity: 0.5;
   }
 
+  /* How it works */
+  .how-it-works {
+    background: #fff9f2;
+    border: 1.5px solid var(--warm-tan);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+  }
+  .how-it-works h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rust);
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    background: var(--rust);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    margin-top: 1px;
+  }
+  .step-text {
+    font-size: 14px;
+    color: var(--brown);
+    line-height: 1.5;
+    font-weight: 300;
+  }
+  .step-text strong { font-weight: 500; }
+  .privacy-note {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--warm-tan);
+    font-size: 12px;
+    color: #9a7c68;
+    line-height: 1.6;
+  }
+  .privacy-note span { font-size: 14px; vertical-align: middle; margin-right: 4px; }
+
   @media (max-width: 480px) {
     .upload-row { grid-template-columns: 1fr 1fr; gap: 12px; }
     .card-name { font-size: 18px; }
@@ -383,10 +439,36 @@
 <div class="page">
 
   <header class="header">
-    <div class="year-badge">Class of 2005 Reunion</div>
+    <div class="year-badge">Class of 2005 Reconnect</div>
     <h1>Then &amp; <span>Now</span></h1>
-    <p>Upload your ~2000 photo and one from today. Download and share with the group.</p>
+    <p>Make your own card and share it with the group. Takes 2 minutes.</p>
   </header>
+
+  <!-- Instructions -->
+  <div class="how-it-works">
+    <h3>How it works</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Type your <strong>name</strong> below</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Tap <strong>Then</strong> to upload a photo from around 2000 — school ID, class photo, anything works</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Tap <strong>Now</strong> to upload a recent photo of yourself</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Your card appears in the preview below — tap <strong>Download JPG</strong> or <strong>Share to WhatsApp</strong> to send it to the group</div>
+      </div>
+    </div>
+    <div class="privacy-note">
+      <span>🔒</span> Your photos never leave your device. Everything happens in your browser — nothing is uploaded to any server.
+    </div>
+  </div>
 
   <!-- Name -->
   <div class="name-field">
@@ -415,12 +497,12 @@
 
     <!-- NOW slot -->
     <div class="upload-slot" id="slot-now">
-      <div class="slot-year-tag" style="background: var(--gold); color: #1e1510;">2025</div>
+      <div class="slot-year-tag" style="background: var(--gold); color: #1e1510;">2026</div>
       <input type="file" accept="image/*" id="file-now" />
       <div class="slot-inner">
         <div class="slot-icon">🤳</div>
         <div class="slot-label">Now</div>
-        <div class="slot-sub">Your photo today</div>
+        <div class="slot-sub">Your photo today (2026)</div>
       </div>
       <div class="slot-preview" id="preview-now">
         <img id="img-now" src="" alt="Now photo" />
@@ -460,7 +542,7 @@
           <div class="card-photo-placeholder">
             <span>🤳</span><p>2025</p>
           </div>
-          <div class="photo-year" style="background: var(--gold); color: #1e1510;">2025</div>
+          <div class="photo-year" style="background: var(--gold); color: #1e1510;">2026</div>
         </div>
 
       </div>
@@ -468,12 +550,12 @@
       <div class="card-footer">
         <div>
           <div class="card-name" id="card-name-display">Your Name</div>
-          <div class="card-years">Class of 2005 · 20 Years</div>
+          <div class="card-years">Class of 2005 · 21 Years</div>
         </div>
         <div class="card-divider"></div>
         <div class="card-reunion-badge">
-          <div class="reunion-text">Reunion</div>
-          <div class="reunion-year">2025</div>
+          <div class="reunion-text">Reconnect</div>
+          <div class="reunion-year">2026</div>
         </div>
       </div>
     </div>
