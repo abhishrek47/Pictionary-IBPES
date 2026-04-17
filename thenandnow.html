@@ -1,0 +1,640 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Then & Now — IBPES Class of 2005</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&family=Abril+Fatface&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #fdf6ee;
+    --warm-tan: #e8d5b0;
+    --brown: #4a3728;
+    --rust: #b85c38;
+    --gold: #c9963a;
+    --dark: #1e1510;
+    --shadow: rgba(74,55,40,0.18);
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--dark);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, #f5e6cc44 0%, transparent 50%),
+      radial-gradient(circle at 80% 90%, #e8c89022 0%, transparent 50%);
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  .page { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 48px; }
+  .year-badge {
+    display: inline-block;
+    background: var(--rust);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-family: 'Abril Fatface', serif;
+    font-size: clamp(44px, 10vw, 72px);
+    color: var(--brown);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+  .header h1 span { color: var(--rust); font-style: italic; font-family: 'Playfair Display', serif; }
+  .header p {
+    margin-top: 12px;
+    font-size: 15px;
+    color: #6b5040;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+
+  /* Upload section */
+  .upload-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .upload-slot {
+    position: relative;
+    border: 2px dashed var(--warm-tan);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff9f2;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+    aspect-ratio: 3/4;
+  }
+  .upload-slot:hover { border-color: var(--gold); background: #fffbf5; }
+  .upload-slot.has-image { border-style: solid; border-color: var(--gold); }
+
+  .upload-slot input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 5;
+  }
+
+  .slot-inner {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; padding: 20px; text-align: center;
+  }
+
+  .slot-icon { font-size: 32px; opacity: 0.5; }
+  .slot-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--brown);
+  }
+  .slot-sub { font-size: 12px; color: #9a7c68; font-weight: 300; }
+
+  .slot-preview {
+    position: absolute; inset: 0; z-index: 2;
+    display: none;
+    flex-direction: column;
+  }
+  .slot-preview img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .slot-preview .change-btn {
+    position: absolute; bottom: 8px; right: 8px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    z-index: 6;
+    backdrop-filter: blur(4px);
+    font-family: 'DM Sans', sans-serif;
+    pointer-events: none;
+  }
+
+  .slot-year-tag {
+    position: absolute; top: 10px; left: 10px; z-index: 7;
+    background: var(--rust);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: 'DM Sans', sans-serif;
+    pointer-events: none;
+  }
+
+  /* Name input */
+  .name-field {
+    margin-bottom: 28px;
+  }
+  .name-field label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--rust);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .name-field input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid var(--warm-tan);
+    border-radius: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--brown);
+    background: #fff9f2;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-field input:focus { border-color: var(--gold); }
+  .name-field input::placeholder { color: #c4a882; font-weight: 400; font-style: italic; }
+
+  /* Preview card */
+  .preview-section { margin-bottom: 32px; }
+  .preview-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #9a7c68;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  /* The exportable card */
+  #export-card {
+    width: 100%;
+    background: #1e1510;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px var(--shadow), 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .card-header {
+    padding: 22px 28px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-school {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #a0836e;
+    font-weight: 500;
+  }
+  .card-title-group { text-align: right; }
+  .card-then-now {
+    font-family: 'Abril Fatface', serif;
+    font-size: 28px;
+    color: var(--cream);
+    line-height: 1;
+  }
+  .card-then-now span { color: var(--gold); }
+
+  .card-photos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    margin: 0 16px;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-photo-slot {
+    position: relative;
+    aspect-ratio: 3/4;
+    background: #2d2018;
+    overflow: hidden;
+  }
+  .card-photo-slot img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .card-photo-slot .photo-year {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: var(--rust);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .card-photo-slot .photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(14,9,5,0.7) 0%, transparent 50%);
+  }
+
+  .card-photo-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+    color: #5a3e2f;
+  }
+  .card-photo-placeholder span { font-size: 28px; }
+  .card-photo-placeholder p { font-size: 11px; letter-spacing: 1px; font-family: 'DM Sans', sans-serif; }
+
+  .card-footer {
+    padding: 16px 28px 22px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+  }
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.1;
+  }
+  .card-years {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+  .card-divider {
+    width: 1px; height: 36px;
+    background: #3a2618;
+    margin: 0 8px;
+  }
+  .card-reunion-badge {
+    text-align: right;
+  }
+  .card-reunion-badge .reunion-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #7a5c46;
+  }
+  .card-reunion-badge .reunion-year {
+    font-family: 'Abril Fatface', serif;
+    font-size: 22px;
+    color: var(--rust);
+    line-height: 1;
+  }
+
+  /* Decorative line */
+  .card-line {
+    height: 3px;
+    background: linear-gradient(to right, var(--rust), var(--gold), var(--rust));
+    margin: 0 16px 0;
+  }
+
+  /* Buttons */
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 140px;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shadow); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-primary {
+    background: var(--rust);
+    color: #fff;
+  }
+  .btn-secondary {
+    background: var(--warm-tan);
+    color: var(--brown);
+  }
+
+  .share-hint {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #9a7c68;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--brown);
+    color: var(--cream);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Divider ornament */
+  .ornament {
+    text-align: center;
+    color: var(--gold);
+    font-size: 20px;
+    letter-spacing: 12px;
+    margin: 32px 0;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 480px) {
+    .upload-row { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card-name { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="header">
+    <div class="year-badge">Class of 2005 Reunion</div>
+    <h1>Then &amp; <span>Now</span></h1>
+    <p>Upload your ~2000 photo and one from today. Download and share with the group.</p>
+  </header>
+
+  <!-- Name -->
+  <div class="name-field">
+    <label>Your Name</label>
+    <input type="text" id="name-input" placeholder="e.g. Rahul Sharma" maxlength="36" />
+  </div>
+
+  <!-- Photo uploads -->
+  <div class="upload-row">
+
+    <!-- THEN slot -->
+    <div class="upload-slot" id="slot-then">
+      <div class="slot-year-tag">~2000</div>
+      <input type="file" accept="image/*" id="file-then" />
+      <div class="slot-inner">
+        <div class="slot-icon">📷</div>
+        <div class="slot-label">Then</div>
+        <div class="slot-sub">~Year 2000 photo</div>
+      </div>
+      <div class="slot-preview" id="preview-then">
+        <img id="img-then" src="" alt="Then photo" />
+        <div class="photo-overlay"></div>
+        <button class="change-btn">change</button>
+      </div>
+    </div>
+
+    <!-- NOW slot -->
+    <div class="upload-slot" id="slot-now">
+      <div class="slot-year-tag" style="background: var(--gold); color: #1e1510;">2025</div>
+      <input type="file" accept="image/*" id="file-now" />
+      <div class="slot-inner">
+        <div class="slot-icon">🤳</div>
+        <div class="slot-label">Now</div>
+        <div class="slot-sub">Your photo today</div>
+      </div>
+      <div class="slot-preview" id="preview-now">
+        <img id="img-now" src="" alt="Now photo" />
+        <div class="photo-overlay"></div>
+        <button class="change-btn">change</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ornament">✦ ✦ ✦</div>
+
+  <!-- Preview card -->
+  <div class="preview-section">
+    <div class="preview-label">Preview — your card</div>
+
+    <div id="export-card">
+      <div class="card-header">
+        <div class="card-school">IBPES · Pune</div>
+        <div class="card-title-group">
+          <div class="card-then-now">Then &amp; <span>Now</span></div>
+        </div>
+      </div>
+
+      <div class="card-line"></div>
+
+      <div class="card-photos" style="margin-top: 14px;">
+
+        <div class="card-photo-slot" id="card-then">
+          <div class="card-photo-placeholder">
+            <span>📷</span><p>~2000</p>
+          </div>
+          <div class="photo-year">~2000</div>
+        </div>
+
+        <div class="card-photo-slot" id="card-now">
+          <div class="card-photo-placeholder">
+            <span>🤳</span><p>2025</p>
+          </div>
+          <div class="photo-year" style="background: var(--gold); color: #1e1510;">2025</div>
+        </div>
+
+      </div>
+
+      <div class="card-footer">
+        <div>
+          <div class="card-name" id="card-name-display">Your Name</div>
+          <div class="card-years">Class of 2005 · 20 Years</div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-reunion-badge">
+          <div class="reunion-text">Reunion</div>
+          <div class="reunion-year">2025</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-download" disabled>
+      ⬇ Download JPG
+    </button>
+    <button class="btn btn-secondary" id="btn-whatsapp" disabled>
+      📤 Share to WhatsApp
+    </button>
+  </div>
+
+  <p class="share-hint">
+    Download your card as a JPG, then open WhatsApp and share it directly to the reunion group.<br>
+    On mobile, tap Share and select WhatsApp from the share sheet.
+  </p>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  const state = { then: null, now: null, name: '' };
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function updateCardName() {
+    const el = document.getElementById('card-name-display');
+    el.textContent = state.name || 'Your Name';
+  }
+
+  function updateButtons() {
+    const ready = state.then && state.now && state.name.trim();
+    document.getElementById('btn-download').disabled = !ready;
+    document.getElementById('btn-whatsapp').disabled = !ready;
+  }
+
+  function setPhoto(which, dataUrl) {
+    state[which] = dataUrl;
+
+    // Update upload slot
+    const slot = document.getElementById('slot-' + which);
+    const preview = document.getElementById('preview-' + which);
+    const img = document.getElementById('img-' + which);
+    img.src = dataUrl;
+    preview.style.display = 'flex';
+    slot.classList.add('has-image');
+
+    // Update card
+    const cardSlot = document.getElementById('card-' + which);
+    // Remove placeholder, set image
+    const placeholder = cardSlot.querySelector('.card-photo-placeholder');
+    if (placeholder) placeholder.style.display = 'none';
+
+    let cardImg = cardSlot.querySelector('.card-img-real');
+    if (!cardImg) {
+      cardImg = document.createElement('img');
+      cardImg.className = 'card-img-real';
+      cardImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+      cardSlot.insertBefore(cardImg, cardSlot.firstChild);
+    }
+    cardImg.src = dataUrl;
+
+    updateButtons();
+  }
+
+  // File handlers
+  ['then','now'].forEach(which => {
+    document.getElementById('file-' + which).addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => setPhoto(which, ev.target.result);
+      reader.readAsDataURL(file);
+    });
+  });
+
+  // Name handler
+  document.getElementById('name-input').addEventListener('input', function() {
+    state.name = this.value;
+    updateCardName();
+    updateButtons();
+  });
+
+  // Capture card as canvas
+  async function captureCard() {
+    const card = document.getElementById('export-card');
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#1e1510',
+      logging: false,
+    });
+    return canvas;
+  }
+
+  // Download
+  document.getElementById('btn-download').addEventListener('click', async function() {
+    this.textContent = 'Generating...';
+    this.disabled = true;
+    try {
+      const canvas = await captureCard();
+      const link = document.createElement('a');
+      const safeName = (state.name || 'then-and-now').replace(/\s+/g, '-').toLowerCase();
+      link.download = `then-and-now-${safeName}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.92);
+      link.click();
+      showToast('✓ Card downloaded! Now share it on WhatsApp.');
+    } catch(err) {
+      showToast('Something went wrong. Try again.');
+    }
+    this.textContent = '⬇ Download JPG';
+    this.disabled = false;
+  });
+
+  // WhatsApp share (Web Share API on mobile, fallback to wa.me on desktop)
+  document.getElementById('btn-whatsapp').addEventListener('click', async function() {
+    this.textContent = 'Preparing...';
+    this.disabled = true;
+    try {
+      const canvas = await captureCard();
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+      const safeName = (state.name || 'then-and-now').replace(/\s+/g, '-').toLowerCase();
+      const file = new File([blob], `then-and-now-${safeName}.jpg`, { type: 'image/jpeg' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Then & Now — ${state.name}`,
+          text: `Look at this! Class of 2005 — 20 years later 🎉`,
+        });
+        showToast('Shared successfully!');
+      } else {
+        // Fallback: download and hint
+        const url = canvas.toDataURL('image/jpeg', 0.92);
+        const link = document.createElement('a');
+        link.download = `then-and-now-${safeName}.jpg`;
+        link.href = url;
+        link.click();
+        setTimeout(() => {
+          window.open('https://wa.me/?text=' + encodeURIComponent(`Then %26 Now — ${state.name} | Class of 2005 Reunion 🎉`), '_blank');
+        }, 600);
+        showToast('Downloaded! Opening WhatsApp…');
+      }
+    } catch(err) {
+      if (err.name !== 'AbortError') showToast('Download the image and share it manually.');
+    }
+    this.textContent = '📤 Share to WhatsApp';
+    this.disabled = false;
+  });
+</script>
+</body>
+</html>
