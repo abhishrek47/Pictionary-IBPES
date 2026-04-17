@@ -600,37 +600,54 @@
     this.disabled = false;
   });
 
-  // WhatsApp share (Web Share API on mobile, fallback to wa.me on desktop)
+  // Detect mobile
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Update hint text based on device
+  document.querySelector('.share-hint').innerHTML = isMobile
+    ? 'Tap <strong>Share to WhatsApp</strong> to send your card directly to the reunion group via the share sheet.'
+    : 'On desktop: click <strong>Share to WhatsApp</strong> to download your card and open WhatsApp Web — attach the downloaded image in the chat.';
+
+  // WhatsApp share
   document.getElementById('btn-whatsapp').addEventListener('click', async function() {
     this.textContent = 'Preparing...';
     this.disabled = true;
     try {
       const canvas = await captureCard();
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
       const safeName = (state.name || 'then-and-now').replace(/\s+/g, '-').toLowerCase();
-      const file = new File([blob], `then-and-now-${safeName}.jpg`, { type: 'image/jpeg' });
+      const filename = `then-and-now-${safeName}.jpg`;
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Then & Now — ${state.name}`,
-          text: `Look at this! Class of 2005 — 20 years later 🎉`,
-        });
-        showToast('Shared successfully!');
-      } else {
-        // Fallback: download and hint
-        const url = canvas.toDataURL('image/jpeg', 0.92);
-        const link = document.createElement('a');
-        link.download = `then-and-now-${safeName}.jpg`;
-        link.href = url;
-        link.click();
-        setTimeout(() => {
-          window.open('https://wa.me/?text=' + encodeURIComponent(`Then %26 Now — ${state.name} | Class of 2005 Reunion 🎉`), '_blank');
-        }, 600);
-        showToast('Downloaded! Opening WhatsApp…');
+      if (isMobile && navigator.canShare) {
+        // Mobile: use native share sheet
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Then & Now — ${state.name}`,
+            text: `Class of 2005 Reunion 🎉`,
+          });
+          showToast('Shared!');
+          this.textContent = '📤 Share to WhatsApp';
+          this.disabled = false;
+          return;
+        }
       }
+
+      // Desktop (or mobile fallback): download + open WhatsApp Web
+      const url = canvas.toDataURL('image/jpeg', 0.92);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      link.click();
+
+      showToast('Downloaded! Opening WhatsApp Web…');
+      setTimeout(() => {
+        window.open('https://web.whatsapp.com', '_blank');
+      }, 1200);
+
     } catch(err) {
-      if (err.name !== 'AbortError') showToast('Download the image and share it manually.');
+      if (err.name !== 'AbortError') showToast('Try downloading and sharing manually.');
     }
     this.textContent = '📤 Share to WhatsApp';
     this.disabled = false;
