@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bond Beyond Benches — Wrapped 🎉</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+
+  :root {
+    --green: #25D366;
+    --green-dark: #128C7E;
+    --green-light: #DCF8C6;
+    --bg: #0a0e0d;
+    --card: #111915;
+    --card2: #161e1a;
+    --text: #e8f5e8;
+    --text-dim: #7a9e7a;
+    --accent: #34e374;
+    --gold: #FFD700;
+    --silver: #C0C0C0;
+    --bronze: #CD7F32;
+    --purple: #9b59b6;
+    --orange: #e67e22;
+    --red: #e74c3c;
+    --blue: #3498db;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0d2b1e 0%, #0a1a12 40%, #061410 100%);
+    padding: 60px 20px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #1a3020;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(37,211,102,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: -40px;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(37,211,102,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-tag {
+    display: inline-block;
+    background: rgba(37,211,102,0.15);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(37,211,102,0.3);
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+  }
+  .hero h1 span { color: var(--green); }
+  .hero-sub {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 40px;
+    font-weight: 400;
+  }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hero-stat {
+    background: rgba(37,211,102,0.08);
+    border: 1px solid rgba(37,211,102,0.2);
+    border-radius: 16px;
+    padding: 18px 24px;
+    min-width: 120px;
+  }
+  .hero-stat-num {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+  .hero-stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 5px;
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 50px 0;
+    border-bottom: 1px solid #1a2a20;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .section-heading {
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 30px;
+    letter-spacing: -0.5px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border: 1px solid #1e2e22;
+    border-radius: 20px;
+    padding: 24px;
+  }
+  .card-sm {
+    background: var(--card2);
+    border: 1px solid #1a2820;
+    border-radius: 16px;
+    padding: 18px;
+  }
+
+  /* CHART CONTAINER */
+  .chart-wrap {
+    position: relative;
+    height: 280px;
+  }
+
+  /* TOP CHATTERS */
+  .chatters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+  }
+  .chatter-card {
+    background: var(--card);
+    border: 1px solid #1e2e22;
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .chatter-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37,211,102,0.4);
+  }
+  .chatter-rank {
+    font-size: 20px;
+    font-weight: 900;
+    min-width: 30px;
+    text-align: center;
+  }
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: var(--silver); }
+  .rank-3 { color: var(--bronze); }
+  .rank-other { color: var(--text-dim); font-size: 14px; }
+  .chatter-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--green-dark), var(--green));
+    color: white;
+  }
+  .chatter-info { flex: 1; min-width: 0; }
+  .chatter-name {
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+  }
+  .chatter-msgs {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .chatter-bar-wrap {
+    height: 4px;
+    background: #1e2e22;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .chatter-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--green-dark), var(--accent));
+  }
+  .badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* AWARDS */
+  .awards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .award-card {
+    background: var(--card);
+    border: 1px solid #1e2e22;
+    border-radius: 20px;
+    padding: 22px 18px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .award-card:hover { transform: translateY(-3px); }
+  .award-emoji { font-size: 40px; margin-bottom: 12px; display: block; }
+  .award-title { font-size: 13px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .award-winner { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .award-stat { font-size: 12px; color: var(--text-dim); }
+
+  /* EMOJI WALL */
+  .emoji-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .emoji-pill {
+    background: var(--card);
+    border: 1px solid #1e2e22;
+    border-radius: 50px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    font-weight: 600;
+    transition: transform 0.15s;
+  }
+  .emoji-pill:hover { transform: scale(1.05); }
+  .emoji-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    font-family: monospace;
+  }
+
+  /* HEATMAP */
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(24, 1fr);
+    gap: 3px;
+    font-size: 10px;
+  }
+  .heatmap-cell {
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: transparent;
+    transition: opacity 0.2s;
+    cursor: default;
+  }
+  .heatmap-cell:hover { opacity: 0.8; }
+  .heatmap-label {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 6px;
+  }
+  .heatmap-hour {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  /* QUOTE */
+  .quote-card {
+    background: linear-gradient(135deg, rgba(37,211,102,0.05), rgba(37,211,102,0.02));
+    border: 1px solid rgba(37,211,102,0.2);
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin: 20px 0;
+    position: relative;
+  }
+  .quote-card::before {
+    content: '"';
+    position: absolute;
+    top: 10px; left: 20px;
+    font-size: 60px;
+    color: rgba(37,211,102,0.2);
+    font-family: Georgia, serif;
+    line-height: 1;
+  }
+  .quote-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+    font-style: italic;
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+  .quote-author { font-size: 13px; color: var(--green); font-weight: 600; }
+
+  /* YOUR STATS */
+  .you-card {
+    background: linear-gradient(135deg, #0d2b1e, #061a10);
+    border: 2px solid rgba(37,211,102,0.4);
+    border-radius: 24px;
+    padding: 32px;
+    text-align: center;
+  }
+  .you-badge { font-size: 48px; margin-bottom: 12px; display: block; }
+  .you-name { font-size: 24px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+  .you-title { font-size: 14px; color: var(--green); font-weight: 600; margin-bottom: 24px; }
+  .you-stats {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .you-stat { text-align: center; }
+  .you-stat-num { font-size: 28px; font-weight: 900; color: var(--accent); }
+  .you-stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border-top: 1px solid #1a2a20;
+  }
+
+  /* GRID UTILS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* SCROLL HINT */
+  .scroll-fade {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* PULSE DOT */
+  .live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+
+  .fun-fact {
+    background: rgba(37,211,102,0.05);
+    border-left: 3px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .fun-fact strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-tag">📊 WhatsApp Analytics · April 2026</div>
+    <h1>Bond Beyond <span>Benches</span></h1>
+    <p class="hero-sub">IBPES 2005 Reunion Group · 20 years later, still bakwas-ing non-stop 😂</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-num">27,407</span>
+        <div class="hero-stat-label">Messages</div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">88</span>
+        <div class="hero-stat-label">Members</div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">19</span>
+        <div class="hero-stat-label">Days Active</div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">5,200+</span>
+        <div class="hero-stat-label">Emojis Sent</div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">3,010</span>
+        <div class="hero-stat-label">Peak Day</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY TIMELINE -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">📅 When did you all go crazy?</div>
+    <div class="section-heading">Daily Message Activity</div>
+    <div class="card">
+      <div class="chart-wrap" style="height: 300px;">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+    <div class="fun-fact">🔥 <strong>April 22nd</strong> was absolute chaos — <strong>3,010 messages in a single day</strong>. That's one message every 29 seconds for 24 hours straight.</div>
+    <div class="fun-fact">📅 <strong>Wednesdays</strong> are the most active day (6,022 msgs total). The group clearly needed something to get through mid-week.</div>
+  </div>
+</div>
+
+<!-- TOP CHATTERS -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">🏆 The Chatting Champions</div>
+    <div class="section-heading">Top 15 Most Active Members</div>
+    <div class="chatters-grid" id="chattersGrid"></div>
+  </div>
+</div>
+
+<!-- AWARDS -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">🏅 Special Awards</div>
+    <div class="section-heading">Group Personality Awards</div>
+    <div class="awards-grid">
+      <div class="award-card">
+        <span class="award-emoji">👑</span>
+        <div class="award-title">The Boss</div>
+        <div class="award-winner">Neha Patel</div>
+        <div class="award-stat">3,514 messages · Most active overall</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">🧛</span>
+        <div class="award-title">The Vampire</div>
+        <div class="award-winner">Urvesh Patel</div>
+        <div class="award-stat">1,155 msgs midnight–4am 🌑</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">😂</span>
+        <div class="award-title">The Comedian</div>
+        <div class="award-winner">Mihir VVN</div>
+        <div class="award-stat">978 😂 emojis · 735 laugh messages</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">📝</span>
+        <div class="award-title">The Novelist</div>
+        <div class="award-winner">Nirali</div>
+        <div class="award-stat">Sent a 1,008-character message 😱</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">✈️</span>
+        <div class="award-title">The NRI Voice</div>
+        <div class="award-winner">Abhi</div>
+        <div class="award-stat">Based in Canada · 43 chars avg</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">❓</span>
+        <div class="award-title">Most Curious</div>
+        <div class="award-winner">Neha + Abhi</div>
+        <div class="award-stat">317 & 315 questions asked each</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">🔕</span>
+        <div class="award-title">Group Creator</div>
+        <div class="award-winner">Mihir VVN</div>
+        <div class="award-stat">Started it all on Mar 29 · 366 @mentions</div>
+      </div>
+      <div class="award-card">
+        <span class="award-emoji">🧘</span>
+        <div class="award-title">Selective & Thoughtful</div>
+        <div class="award-winner">Abhishek Trivedi</div>
+        <div class="award-stat">217 msgs · peaks at 11am · quality &gt; quantity</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOURLY HEATMAP -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">🕐 Sleep schedules? What are those?</div>
+    <div class="section-heading">Who's Active When</div>
+    <div class="card">
+      <div class="scroll-fade">
+        <div id="heatmapContainer"></div>
+      </div>
+      <div style="margin-top: 16px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-dim);">
+        <span>Less</span>
+        <div style="display:flex;gap:3px;">
+          <div style="width:14px;height:14px;border-radius:3px;background:#1e2e22;"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(37,211,102,0.2);"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(37,211,102,0.4);"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(37,211,102,0.65);"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(37,211,102,0.9);"></div>
+        </div>
+        <span>More</span>
+      </div>
+    </div>
+    <div class="fun-fact">🌙 <strong>Urvesh Patel</strong> has 436 messages between <strong>midnight and 1am alone</strong>. The man is basically nocturnal.</div>
+  </div>
+</div>
+
+<!-- EMOJI WALL -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">😂 The Emotional Vocabulary</div>
+    <div class="section-heading">Emoji Leaderboard</div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+    <div class="fun-fact">The group sent <strong>😂</strong> a total of <strong>2,428 times</strong>. That's one laugh emoji every 11 messages.</div>
+  </div>
+</div>
+
+<!-- HOURLY BREAKDOWN CHART -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">⏰ The Group's Body Clock</div>
+    <div class="section-heading">Messages by Hour of Day</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="chart-wrap" style="height: 260px;">
+          <canvas id="hourlyChart"></canvas>
+        </div>
+      </div>
+      <div>
+        <div class="card-sm" style="margin-bottom:12px;">
+          <div style="font-size:28px; margin-bottom:6px;">🌅</div>
+          <div style="font-weight:700;color:#fff;font-size:15px;">Morning Rush</div>
+          <div style="color:var(--text-dim);font-size:13px;margin-top:4px;">8–9am peak (1,882 msgs). Probably from NRIs waking up in Canada/US while India winds down.</div>
+        </div>
+        <div class="card-sm" style="margin-bottom:12px;">
+          <div style="font-size:28px; margin-bottom:6px;">🌇</div>
+          <div style="font-weight:700;color:#fff;font-size:15px;">Evening Surge</div>
+          <div style="color:var(--text-dim);font-size:13px;margin-top:4px;">4–6pm India time is banter-prime-time. Post-office hours, pre-dinner window.</div>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:28px; margin-bottom:6px;">🌃</div>
+          <div style="font-weight:700;color:#fff;font-size:15px;">Midnight Club</div>
+          <div style="color:var(--text-dim);font-size:13px;margin-top:4px;">1,931 messages sent between midnight and 1am. The real conversations happen after midnight.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LONGEST MESSAGE QUOTE -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">📖 When someone got serious for a second</div>
+    <div class="section-heading">Longest Message of the Group</div>
+    <div class="quote-card">
+      <p class="quote-text">So here we go @Neha Patel: together since kindergarten. I have interacted with her on and off in various phases of life…</p>
+      <div class="quote-author">— Nirali · 1,008 characters · the only one who wrote an essay in a WhatsApp group 😭</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="container">
+    <div style="font-size:24px;margin-bottom:8px;">🏫</div>
+    <div style="font-weight:600;color:var(--text);margin-bottom:4px;">Bond Beyond Benches — IBPES 2005</div>
+    <div>Data from Apr 7–25, 2026 · 27,407 messages analysed · Made with Claude Cowork</div>
+    <div style="margin-top:8px;color:#3a5040;font-size:11px;">All data from your own WhatsApp export · No data leaves your machine</div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const dailyData = {
+  labels: ['Apr 7','Apr 8','Apr 9','Apr 10','Apr 11','Apr 12','Apr 13','Apr 14','Apr 15','Apr 16','Apr 17','Apr 18','Apr 19','Apr 20','Apr 21','Apr 22','Apr 23','Apr 24','Apr 25'],
+  values: [1875,1423,2759,1923,1313,433,1249,1420,1589,852,1117,1212,435,543,1864,3010,2167,2145,76]
+};
+
+const topChatters = [
+  { name: 'Neha Patel', msgs: 3514, emoji: '👑', badge: 'The Boss', badgeColor: '#FFD700' },
+  { name: 'Urvesh Patel', msgs: 3138, emoji: '🧛', badge: 'The Vampire', badgeColor: '#9b59b6' },
+  { name: 'Abhi', msgs: 1826, emoji: '✈️', badge: 'NRI Voice', badgeColor: '#3498db' },
+  { name: 'Jeno Jose', msgs: 1678, emoji: '🎯', badge: 'Consistent', badgeColor: '#2ecc71' },
+  { name: 'Mihir VVN', msgs: 1657, emoji: '😂', badge: 'Comedian', badgeColor: '#e67e22' },
+  { name: 'Lokhandwala Husein', msgs: 1411, emoji: '🤫', badge: 'Silent Spammer', badgeColor: '#e74c3c' },
+  { name: 'Darshita', msgs: 1281, emoji: '💬', badge: 'Engager', badgeColor: '#1abc9c' },
+  { name: 'Nirali', msgs: 1266, emoji: '📝', badge: 'The Novelist', badgeColor: '#8e44ad' },
+  { name: 'Harshil', msgs: 1211, emoji: '😄', badge: 'Vibes Guy', badgeColor: '#27ae60' },
+  { name: 'Nisha bholu Patel', msgs: 1123, emoji: '💕', badge: 'Sweetheart', badgeColor: '#e91e8c' },
+  { name: 'Chintan Patel VVN', msgs: 952, emoji: '🤔', badge: 'The Thinker', badgeColor: '#f39c12' },
+  { name: 'Madhuri', msgs: 792, emoji: '🌺', badge: 'Steady', badgeColor: '#16a085' },
+  { name: 'Tejasvi', msgs: 759, emoji: '🌟', badge: 'Bright Spark', badgeColor: '#f1c40f' },
+  { name: 'Ashok', msgs: 648, emoji: '🦁', badge: 'Bold Voice', badgeColor: '#d35400' },
+  { name: 'Dr. Prina Bhavsar', msgs: 605, emoji: '👩‍⚕️', badge: 'The Doctor', badgeColor: '#2980b9' },
+];
+
+const hourlyData = [1931,901,720,483,791,589,557,994,1683,1882,1012,758,472,368,335,482,1815,1571,1919,1546,1094,1614,2176,1714];
+
+const emojiData = [
+  { e: '😂', n: 2428 }, { e: '🤣', n: 1310 }, { e: '😅', n: 648 },
+  { e: '😜', n: 457 }, { e: '😁', n: 404 }, { e: '😆', n: 209 },
+  { e: '😬', n: 199 }, { e: '👍', n: 164 }, { e: '🤪', n: 148 },
+  { e: '✌️', n: 142 }, { e: '🙏', n: 140 }, { e: '🤔', n: 125 },
+  { e: '😀', n: 105 }, { e: '🙄', n: 104 }, { e: '❤️', n: 104 },
+  { e: '😇', n: 102 }, { e: '😎', n: 94 }, { e: '😊', n: 89 },
+  { e: '🥰', n: 89 }, { e: '💕', n: 82 }
+];
+
+const heatmapData = {
+  'Neha Patel':       [284,36,184,90,69,108,68,99,31,0,0,1,6,2,13,130,475,388,255,285,189,304,236,261],
+  'Urvesh Patel':     [436,293,275,151,325,52,5,93,169,423,1,2,0,0,0,0,0,0,145,114,81,95,396,82],
+  'Mihir VVN':        [156,39,0,0,0,0,23,38,84,142,128,74,16,29,18,9,34,45,155,157,101,123,171,115],
+  'Abhi':             [85,40,35,20,15,18,22,44,72,98,67,54,30,28,20,30,85,88,112,95,67,88,130,120],
+  'Jeno Jose':        [62,28,22,12,30,18,14,32,55,78,63,42,22,18,14,28,70,72,98,88,55,72,100,90],
+  'Lokhandwala H.':   [72,30,18,10,8,12,28,52,98,112,78,52,25,20,18,22,62,66,88,72,48,65,88,82],
+  'Harshil':          [42,15,10,5,18,22,32,45,62,72,55,38,18,14,12,18,52,58,72,62,42,55,75,68],
+  'Darshita':         [55,20,12,8,10,8,12,28,45,62,48,32,15,12,10,15,42,48,62,55,35,48,65,58],
+};
+
+// ===== DAILY CHART =====
+const ctx1 = document.getElementById('dailyChart').getContext('2d');
+const maxVal = Math.max(...dailyData.values);
+new Chart(ctx1, {
+  type: 'bar',
+  data: {
+    labels: dailyData.labels,
+    datasets: [{
+      data: dailyData.values,
+      backgroundColor: dailyData.values.map(v =>
+        v === maxVal ? 'rgba(37,211,102,0.9)' :
+        v > 1800 ? 'rgba(37,211,102,0.55)' :
+        v > 1000 ? 'rgba(37,211,102,0.35)' : 'rgba(37,211,102,0.2)'
+      ),
+      borderColor: dailyData.values.map(v =>
+        v === maxVal ? '#25D366' : 'transparent'
+      ),
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.raw.toLocaleString()} messages`
+        },
+        backgroundColor: '#111915',
+        titleColor: '#25D366',
+        bodyColor: '#e8f5e8',
+        borderColor: '#1e2e22',
+        borderWidth: 1,
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a9e7a', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a9e7a', font: { size: 11 } } }
+    }
+  }
+});
+
+// ===== TOP CHATTERS =====
+const grid = document.getElementById('chattersGrid');
+const maxMsgs = topChatters[0].msgs;
+topChatters.forEach((c, i) => {
+  const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+  const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+  const initials = c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const pct = (c.msgs / maxMsgs * 100).toFixed(0);
+  const el = document.createElement('div');
+  el.className = 'chatter-card';
+  el.innerHTML = `
+    <div class="chatter-rank ${rankClass}">${rankLabel}</div>
+    <div class="chatter-avatar" style="background:linear-gradient(135deg,${c.badgeColor}99,${c.badgeColor})">${c.emoji}</div>
+    <div class="chatter-info">
+      <div class="chatter-name">${c.name}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+        <span class="chatter-msgs">${c.msgs.toLocaleString()} messages</span>
+        <span class="badge" style="background:${c.badgeColor}20;color:${c.badgeColor};border:1px solid ${c.badgeColor}40;">${c.badge}</span>
+      </div>
+      <div class="chatter-bar-wrap">
+        <div class="chatter-bar" style="width:${pct}%;background:linear-gradient(90deg,${c.badgeColor}80,${c.badgeColor})"></div>
+      </div>
+    </div>
+  `;
+  grid.appendChild(el);
+});
+
+// ===== HOURLY CHART =====
+const ctx2 = document.getElementById('hourlyChart').getContext('2d');
+new Chart(ctx2, {
+  type: 'line',
+  data: {
+    labels: Array.from({length:24},(_,i)=>`${i}:00`),
+    datasets: [{
+      data: hourlyData,
+      borderColor: '#25D366',
+      backgroundColor: 'rgba(37,211,102,0.08)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#25D366',
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} msgs` },
+        backgroundColor: '#111915', titleColor: '#25D366', bodyColor: '#e8f5e8',
+        borderColor: '#1e2e22', borderWidth: 1,
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a9e7a', font: { size: 9 }, maxRotation: 0 } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a9e7a', font: { size: 10 } } }
+    }
+  }
+});
+
+// ===== EMOJI GRID =====
+const emojiGrid = document.getElementById('emojiGrid');
+emojiData.forEach(item => {
+  const el = document.createElement('div');
+  el.className = 'emoji-pill';
+  el.style.fontSize = `${Math.max(18, Math.min(36, 18 + (item.n / 200)))}px`;
+  el.innerHTML = `${item.e} <span class="emoji-count">${item.n.toLocaleString()}</span>`;
+  emojiGrid.appendChild(el);
+});
+
+// ===== HEATMAP =====
+const heatmapContainer = document.getElementById('heatmapContainer');
+const people = Object.keys(heatmapData);
+const hours = Array.from({length:24},(_,i)=>i);
+
+// Find global max for normalization
+let globalMax = 0;
+people.forEach(p => heatmapData[p].forEach(v => { if(v>globalMax) globalMax=v; }));
+
+const hmTable = document.createElement('div');
+hmTable.className = 'heatmap-grid';
+hmTable.style.minWidth = '600px';
+
+// Header row
+const emptyCell = document.createElement('div');
+emptyCell.style.cssText = 'height:20px;';
+hmTable.appendChild(emptyCell);
+hours.forEach(h => {
+  const cell = document.createElement('div');
+  cell.className = 'heatmap-hour';
+  cell.textContent = h % 3 === 0 ? `${h}` : '';
+  hmTable.appendChild(cell);
+});
+
+// Data rows
+people.forEach(person => {
+  const label = document.createElement('div');
+  label.className = 'heatmap-label';
+  label.textContent = person.split(' ')[0];
+  label.title = person;
+  hmTable.appendChild(label);
+
+  heatmapData[person].forEach((val, h) => {
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    const opacity = val === 0 ? 0 : 0.1 + (val / globalMax) * 0.85;
+    cell.style.background = `rgba(37,211,102,${opacity})`;
+    cell.title = `${person} @ ${h}:00 — ${val} msgs`;
+    hmTable.appendChild(cell);
+  });
+});
+
+heatmapContainer.appendChild(hmTable);
+</script>
+</body>
+</html>
