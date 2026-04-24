@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IBPES 2005 · Chat Wrapped</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #000;
+  touch-action: pan-y;
+}
+
+/* ── PROGRESS DOTS ── */
+.dots {
+  position: fixed;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 4px;
+  z-index: 100;
+}
+.dot {
+  height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.25);
+  transition: all 0.4s ease;
+  flex: 1;
+  min-width: 18px;
+}
+.dot.active { background: rgba(255,255,255,0.9); }
+.dot.done { background: rgba(255,255,255,0.5); }
+
+/* ── SLIDE ── */
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 28px 80px;
+  text-align: center;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94),
+              opacity 0.45s ease;
+  pointer-events: none;
+  overflow: hidden;
+}
+.slide.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+.slide.exit {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+/* ── BACKGROUNDS ── */
+.bg-1  { background: linear-gradient(160deg, #0a0015 0%, #1a0030 50%, #0d0025 100%); }
+.bg-2  { background: linear-gradient(160deg, #001a0a 0%, #003020 100%); }
+.bg-3  { background: linear-gradient(160deg, #1a0005 0%, #3d000f 100%); }
+.bg-4  { background: linear-gradient(160deg, #00101a 0%, #001d35 100%); }
+.bg-5  { background: linear-gradient(160deg, #1a0f00 0%, #3d2500 100%); }
+.bg-6  { background: linear-gradient(160deg, #100020 0%, #250050 100%); }
+.bg-7  { background: linear-gradient(160deg, #001515 0%, #003333 100%); }
+.bg-8  { background: linear-gradient(160deg, #150015 0%, #300030 100%); }
+.bg-9  { background: linear-gradient(160deg, #001500 0%, #003300 100%); }
+.bg-10 { background: linear-gradient(160deg, #15000a 0%, #35001a 100%); }
+.bg-11 { background: linear-gradient(160deg, #0a1500 0%, #1a3000 100%); }
+.bg-12 { background: linear-gradient(160deg, #000a15 0%, #001530 100%); }
+.bg-13 { background: linear-gradient(160deg, #150000 0%, #330000 100%); }
+.bg-14 { background: linear-gradient(160deg, #050520 0%, #0f0f45 100%); }
+.bg-15 { background: linear-gradient(160deg, #0a0020 0%, #200040 100%); }
+
+/* ── TYPOGRAPHY ── */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+.big-num {
+  font-size: clamp(72px, 20vw, 120px);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -4px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent, #fff) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.slide-title {
+  font-size: clamp(28px, 8vw, 42px);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+  color: #fff;
+}
+.slide-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+  max-width: 320px;
+}
+.slide-sub strong { color: rgba(255,255,255,0.9); }
+.accent-text {
+  background: linear-gradient(135deg, #fff 0%, var(--accent, #fff) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── SPECIAL ELEMENTS ── */
+.big-emoji {
+  font-size: 72px;
+  margin-bottom: 20px;
+  display: block;
+  filter: drop-shadow(0 0 30px rgba(255,255,255,0.2));
+}
+
+.name-tag {
+  display: inline-block;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 99px;
+  padding: 8px 20px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.stat-row {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  width: 100%;
+  justify-content: center;
+}
+.stat-pill {
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  flex: 1;
+  max-width: 120px;
+}
+.stat-pill .val { font-size: 24px; font-weight: 900; color: #fff; }
+.stat-pill .lbl { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 3px; letter-spacing: 0.5px; }
+
+.bar-chart { width: 100%; margin: 20px 0; }
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.bar-label { font-size: 12px; color: rgba(255,255,255,0.6); width: 80px; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; background: rgba(255,255,255,0.08); border-radius: 99px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; background: var(--accent, #fff); transition: width 1s ease 0.3s; }
+.bar-val { font-size: 11px; color: rgba(255,255,255,0.5); width: 36px; text-align: left; flex-shrink: 0; }
+
+.quote-block {
+  background: rgba(255,255,255,0.07);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 20px 22px;
+  margin: 20px 0;
+  font-style: italic;
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.55;
+  text-align: left;
+}
+.quote-attr { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; font-style: normal; }
+
+/* ── NAV ZONES ── */
+.nav-left, .nav-right {
+  position: fixed;
+  top: 0; bottom: 0;
+  width: 40%;
+  z-index: 50;
+  cursor: pointer;
+}
+.nav-left { left: 0; }
+.nav-right { right: 0; }
+
+/* ── PROGRESS BAR ── */
+.progress-ring {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  z-index: 100;
+}
+.prog-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.3s;
+}
+.prog-dot.on { background: #fff; transform: scale(1.3); }
+
+/* ── ANIMATIONS ── */
+@keyframes countUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp  { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes glow    { 0%,100%{filter:drop-shadow(0 0 10px currentColor)} 50%{filter:drop-shadow(0 0 40px currentColor)} }
+
+.slide.active .big-num    { animation: countUp 0.7s ease 0.2s both; }
+.slide.active .slide-title { animation: fadeUp 0.6s ease 0.3s both; }
+.slide.active .slide-sub   { animation: fadeUp 0.6s ease 0.45s both; }
+.slide.active .big-emoji   { animation: fadeUp 0.5s ease 0.1s both; }
+.slide.active .name-tag    { animation: fadeUp 0.5s ease 0.15s both; }
+.slide.active .stat-row    { animation: fadeUp 0.6s ease 0.5s both; }
+.slide.active .bar-chart   { animation: fadeUp 0.6s ease 0.4s both; }
+.slide.active .quote-block { animation: fadeUp 0.6s ease 0.4s both; }
+
+/* ── OPENING SLIDE ── */
+.open-title {
+  font-size: clamp(36px, 11vw, 56px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.open-sub { font-size: 14px; color: rgba(255,255,255,0.45); }
+.tap-hint {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 1px;
+  animation: pulse 2s infinite;
+}
+</style>
+</head>
+<body>
+
+<!-- Progress dots -->
+<div class="dots" id="dots"></div>
+
+<!-- Nav zones -->
+<div class="nav-left" onclick="prev()"></div>
+<div class="nav-right" onclick="next()"></div>
+
+<!-- Bottom dots -->
+<div class="progress-ring" id="progRing"></div>
+
+<!-- ═══════════════════════════════════════════ SLIDES ══════════════════════════════════════════ -->
+
+<!-- 0: OPENING -->
+<div class="slide bg-1 active" id="s0">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%, rgba(120,50,255,0.15) 0%, transparent 70%)"></div>
+  <span class="big-emoji">📱</span>
+  <div class="open-title">Bond Beyond<br>Benches.</div>
+  <div class="open-title" style="color:rgba(255,255,255,0.35);font-size:clamp(24px,7vw,38px)">2026 Wrapped.</div>
+  <div class="open-sub" style="margin-top:20px">IBPES 2005 · 20 years later</div>
+  <div class="tap-hint">TAP TO BEGIN →</div>
+</div>
+
+<!-- 1: TOTAL MESSAGES -->
+<div class="slide bg-2" id="s1" style="--accent:#4ade80">
+  <div class="eyebrow">The numbers are in</div>
+  <div class="big-num">28,588</div>
+  <div class="slide-title">messages sent.</div>
+  <div class="slide-sub">In just <strong>27 days</strong>. That's more than most groups send in a year. You had a lot to catch up on.</div>
+  <div class="stat-row">
+    <div class="stat-pill"><div class="val">20</div><div class="lbl">Active Days</div></div>
+    <div class="stat-pill"><div class="val">1,429</div><div class="lbl">Per Day Avg</div></div>
+    <div class="stat-pill"><div class="val">27K+</div><div class="lbl">Text Messages</div></div>
+  </div>
+</div>
+
+<!-- 2: TOP TALKER -->
+<div class="slide bg-3" id="s2" style="--accent:#f87171">
+  <div class="eyebrow">Most Valuable Player</div>
+  <span class="big-emoji">👮</span>
+  <div class="name-tag">Neha Patel</div>
+  <div class="big-num" style="font-size:clamp(60px,16vw,96px)">3,514</div>
+  <div class="slide-title">messages.<br>She never stopped.</div>
+  <div class="slide-sub">That's <strong>12% of all messages</strong> from one person. She also sent 883 messages after midnight. The group is basically her full-time job.</div>
+</div>
+
+<!-- 3: NIGHT OWL -->
+<div class="slide bg-4" id="s3" style="--accent:#60a5fa">
+  <div class="eyebrow">Up all night</div>
+  <span class="big-emoji">🦉</span>
+  <div class="big-num">5,962</div>
+  <div class="slide-title">messages sent<br>past 11 PM.</div>
+  <div class="slide-sub">Your group had <strong>no bedtime</strong>. And the champion of the night shift?</div>
+  <div class="name-tag" style="margin-top:16px">Urvesh Patel · 1,260 late nights 🏆</div>
+  <div class="slide-sub" style="margin-top:10px">What timezone are you in, Urvesh?</div>
+</div>
+
+<!-- 4: PEAK HOUR -->
+<div class="slide bg-5" id="s4" style="--accent:#fb923c">
+  <div class="eyebrow">When things got loud</div>
+  <div class="big-num">10 PM</div>
+  <div class="slide-title">was peak hour.</div>
+  <div class="slide-sub"><strong>2,259 messages</strong> sent at 10 PM alone. Dinner was clearly secondary to the group chat.</div>
+  <div class="bar-chart">
+    <div class="bar-item"><div class="bar-label">9 AM</div><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><div class="bar-val">2,001</div></div>
+    <div class="bar-item"><div class="bar-label">4 PM</div><div class="bar-track"><div class="bar-fill" style="width:83%"></div></div><div class="bar-val">1,876</div></div>
+    <div class="bar-item"><div class="bar-label">6 PM</div><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><div class="bar-val">1,991</div></div>
+    <div class="bar-item"><div class="bar-label" style="color:#fb923c;font-weight:700">10 PM 🔥</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#fb923c"></div></div><div class="bar-val" style="color:#fb923c;font-weight:700">2,259</div></div>
+    <div class="bar-item"><div class="bar-label">12 AM</div><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><div class="bar-val">2,000</div></div>
+  </div>
+</div>
+
+<!-- 5: CRAZIEST DAY -->
+<div class="slide bg-6" id="s5" style="--accent:#c084fc">
+  <div class="eyebrow">Your wildest day</div>
+  <div class="big-num">3,104</div>
+  <div class="slide-title">messages.<br>April 22nd.</div>
+  <div class="slide-sub">The day <em>after</em> the crush confessions game. The whole group was still processing what Amarjeet revealed. <strong>Nobody could stop talking.</strong></div>
+  <div class="quote-block">
+    The crush game started April 21 at 11 PM. The fallout lasted 3 days.
+    <div class="quote-attr">📊 Chat data doesn't lie</div>
+  </div>
+</div>
+
+<!-- 6: CRUSH GAME -->
+<div class="slide bg-7" id="s6" style="--accent:#34d399">
+  <div class="eyebrow">The night everything changed</div>
+  <span class="big-emoji">💘</span>
+  <div class="slide-title">April 21.<br>11 PM.</div>
+  <div class="slide-sub">Chintan said <em>"just share the name."</em></div>
+  <div class="stat-row" style="margin-top:20px">
+    <div class="stat-pill"><div class="val">1,902</div><div class="lbl">Msgs that night</div></div>
+    <div class="stat-pill"><div class="val">215</div><div class="lbl">Times "crush" appeared</div></div>
+    <div class="stat-pill"><div class="val">9</div><div class="lbl">Confessions</div></div>
+  </div>
+  <div class="slide-sub">Amarjeet confessed to a <strong>teacher</strong> and won. Roshni married her crush. Mihir dodged for 2 hours.</div>
+</div>
+
+<!-- 7: BHAI COUNTER -->
+<div class="slide bg-8" id="s7" style="--accent:#e879f9">
+  <div class="eyebrow">Most important word</div>
+  <span class="big-emoji">🤝</span>
+  <div class="big-num">1,011</div>
+  <div class="slide-title">times someone<br>said bhai.</div>
+  <div class="slide-sub">That's about <strong>50 bhais per day</strong>. Bhai is not just a word in this group. It's punctuation. It's a greeting. It's a full sentence.</div>
+  <div class="quote-block" style="margin-top:16px">
+    "bhai bhai bhai. chhe bhai."
+    <div class="quote-attr">— paraphrased from 1,011 messages</div>
+  </div>
+</div>
+
+<!-- 8: LAUGHS -->
+<div class="slide bg-9" id="s8" style="--accent:#86efac">
+  <div class="eyebrow">The sound of the group</div>
+  <div class="big-num">3,144</div>
+  <div class="slide-title">laugh messages. 😂</div>
+  <div class="slide-sub">That's <strong>157 laughs per active day</strong>. Mihir alone was responsible for 779. This group did not take itself seriously — and that's why it worked.</div>
+  <div class="name-tag" style="margin-top:16px">Nisha · top emoji: 🤣🤣🤣🤣 (always four)</div>
+</div>
+
+<!-- 9: QUESTIONS -->
+<div class="slide bg-10" id="s9" style="--accent:#fb7185">
+  <div class="eyebrow">The curious ones</div>
+  <div class="big-num">3,004</div>
+  <div class="slide-title">questions asked.</div>
+  <div class="slide-sub">That's 3,004 question marks. Most of them directed at each other. <strong>Very few got actual answers.</strong> This group prefers to ask more questions.</div>
+  <div class="stat-row" style="margin-top:16px">
+    <div class="stat-pill"><div class="val">318</div><div class="lbl">By Neha</div></div>
+    <div class="stat-pill"><div class="val">315</div><div class="lbl">By Abhi</div></div>
+    <div class="stat-pill"><div class="val">310</div><div class="lbl">By Jeno</div></div>
+  </div>
+</div>
+
+<!-- 10: LONGEST MESSAGE -->
+<div class="slide bg-11" id="s10" style="--accent:#a3e635">
+  <div class="eyebrow">The one who came prepared</div>
+  <span class="big-emoji">📜</span>
+  <div class="name-tag">Nirali</div>
+  <div class="big-num" style="font-size:clamp(56px,14vw,80px)">988</div>
+  <div class="slide-title">characters.<br>One message.</div>
+  <div class="quote-block">
+    "So here we go @Neha Patel: together since kindergarten. I have interacted with her on and off in school..."
+    <div class="quote-attr">— Nirali, going full essay mode, no regrets</div>
+  </div>
+</div>
+
+<!-- 11: EMOJIS -->
+<div class="slide bg-12" id="s11" style="--accent:#67e8f9">
+  <div class="eyebrow">Feelings, expressed</div>
+  <div class="big-num">5,861</div>
+  <div class="slide-title">messages had<br>at least one emoji.</div>
+  <div class="slide-sub">That's <strong>21% of all messages</strong> punctuated with a feeling. 😂 was king. 🤣🤣🤣🤣 was Nisha's signature. ❤️ showed up when it mattered.</div>
+  <div style="font-size:42px;margin-top:20px;letter-spacing:6px;animation:pulse 2s infinite">😂 🤣 ❤️ 🥹 💘</div>
+</div>
+
+<!-- 12: NETWORK -->
+<div class="slide bg-13" id="s12" style="--accent:#fca5a5">
+  <div class="eyebrow">Who talked to whom</div>
+  <span class="big-emoji">🕸️</span>
+  <div class="slide-title">The group had<br>a gravitational core.</div>
+  <div class="bar-chart">
+    <div class="bar-item"><div class="bar-label">Urvesh → Neha</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">118×</div></div>
+    <div class="bar-item"><div class="bar-label">Jeno → Mihir</div><div class="bar-track"><div class="bar-fill" style="width:67%"></div></div><div class="bar-val">79×</div></div>
+    <div class="bar-item"><div class="bar-label">Neha → Mihir</div><div class="bar-track"><div class="bar-fill" style="width:52%"></div></div><div class="bar-val">61×</div></div>
+    <div class="bar-item"><div class="bar-label">Neha → Urvesh</div><div class="bar-track"><div class="bar-fill" style="width:53%"></div></div><div class="bar-val">63×</div></div>
+    <div class="bar-item"><div class="bar-label">Harshil → Mihir</div><div class="bar-track"><div class="bar-fill" style="width:37%"></div></div><div class="bar-val">44×</div></div>
+  </div>
+  <div class="slide-sub">Neha ↔ Urvesh is the group's backbone. Always has been.</div>
+</div>
+
+<!-- 13: AMARJEET SPECIAL -->
+<div class="slide bg-14" id="s13" style="--accent:#fde68a">
+  <div class="eyebrow">The legend award goes to</div>
+  <span class="big-emoji">🏆</span>
+  <div class="name-tag">Amarjeet Singh</div>
+  <div class="slide-title">86 messages.<br>All of them iconic.</div>
+  <div class="slide-sub">The highest <strong>impact-per-message ratio</strong> in the group. Arrived rarely. Never wasted a word. Confessed to a teacher. Won the game.</div>
+  <div class="quote-block">
+    "Jis biscuit se dooba hua biscuit nikal rahe ho, woh bhi doob jaana."
+    <div class="quote-attr">— Amarjeet · 86 messages · 0 wasted</div>
+  </div>
+</div>
+
+<!-- 14: CLOSING -->
+<div class="slide bg-15" id="s14" style="--accent:#c4b5fd">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%, rgba(140,80,255,0.2) 0%, transparent 70%)"></div>
+  <span class="big-emoji">🥹</span>
+  <div class="slide-title" style="font-size:clamp(26px,8vw,40px)">This wasn't just<br>a WhatsApp group.</div>
+  <div class="slide-sub" style="font-size:17px;color:rgba(255,255,255,0.7);max-width:300px;line-height:1.7">
+    20 years of life happened.<br>
+    Different cities. Different countries.<br>
+    Different everything.<br><br>
+    And yet — <strong style="color:#fff">28,588 messages</strong> in 27 days.
+  </div>
+  <div style="margin-top:28px;font-size:13px;color:rgba(255,255,255,0.3);letter-spacing:0.5px">
+    IBPES 2005 · Bond Beyond Benches<br>March – April 2026
+  </div>
+</div>
+
+<script>
+const TOTAL = 15;
+let current = 0;
+let startX = 0;
+let isDragging = false;
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+const ringEl = document.getElementById('progRing');
+for(let i=0; i<TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  dotsEl.appendChild(d);
+  const r = document.createElement('div');
+  r.className = 'prog-dot' + (i===0?' on':'');
+  ringEl.appendChild(r);
+}
+
+function updateDots() {
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.className = 'dot' + (i<current?' done':(i===current?' active':''));
+  });
+  document.querySelectorAll('.prog-dot').forEach((d,i) => {
+    d.className = 'prog-dot' + (i===current?' on':'');
+  });
+}
+
+function goTo(n) {
+  if(n < 0 || n >= TOTAL) return;
+  const old = document.getElementById('s'+current);
+  const nw  = document.getElementById('s'+n);
+  old.classList.remove('active');
+  old.classList.add('exit');
+  setTimeout(() => { old.classList.remove('exit'); }, 460);
+  nw.classList.add('active');
+  current = n;
+  updateDots();
+  // Animate bars
+  setTimeout(() => {
+    nw.querySelectorAll('.bar-fill').forEach(b => {
+      const w = b.style.width;
+      b.style.width = '0%';
+      setTimeout(() => { b.style.width = w; }, 50);
+    });
+  }, 100);
+}
+
+function next() { if(current < TOTAL-1) goTo(current+1); }
+function prev() { if(current > 0) goTo(current-1); }
+
+// Touch swipe
+document.addEventListener('touchstart', e => {
+  startX = e.touches[0].clientX;
+  isDragging = true;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if(!isDragging) return;
+  const dx = e.changedTouches[0].clientX - startX;
+  if(Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+  isDragging = false;
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if(e.key==='ArrowRight'||e.key===' ') next();
+  if(e.key==='ArrowLeft') prev();
+});
+
+// Init bars on first slide (none needed)
+updateDots();
+</script>
+</body>
+</html>
