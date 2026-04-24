@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IBPES 2005 — Group Personality Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #07070f;
+  --card: #0e0e1a;
+  --border: #1a1a2e;
+  --text: #f0f0f0;
+  --muted: #666;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  padding: 52px 20px 36px;
+  background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, var(--bg) 70%);
+  border-bottom: 1px solid #1a1a2e;
+}
+.hero .badge {
+  display: inline-block;
+  background: #1a0a2e;
+  border: 1px solid #4a2080;
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #9b59b6;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+}
+.hero p { font-size: 14px; color: var(--muted); }
+.hero .stat-row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 24px;
+}
+.hero .stat { text-align: center; }
+.hero .stat .num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #a855f7;
+}
+.hero .stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── FILTER TABS ── */
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 16px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid #111;
+  -webkit-overflow-scrolling: touch;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn {
+  flex-shrink: 0;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 99px;
+  padding: 7px 16px;
+  font-size: 12px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filter-btn.active { background: #4a2080; border-color: #7e3af2; color: #fff; }
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+@media(max-width:400px) { .grid { grid-template-columns: 1fr; } }
+
+/* ── CARD ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 16px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+}
+.card:hover { transform: translateY(-3px); border-color: #2a2a4a; }
+.card:active { transform: scale(0.97); }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.avatar {
+  width: 42px; height: 42px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px;
+  flex-shrink: 0;
+}
+.card-name { font-size: 14px; font-weight: 700; line-height: 1.2; }
+.card-msgs { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.archetype {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.card-desc {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+/* stat pills */
+.pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.pill {
+  background: rgba(255,255,255,0.05);
+  border-radius: 99px;
+  padding: 3px 9px;
+  font-size: 10px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.quote-bubble {
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #0e0e1a;
+  border: 1px solid #222;
+  border-radius: 24px 24px 0 0;
+  padding: 28px 24px 40px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.modal-handle {
+  width: 36px; height: 4px;
+  background: #333;
+  border-radius: 99px;
+  margin: 0 auto 20px;
+}
+.modal-avatar {
+  width: 72px; height: 72px;
+  border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 26px;
+  margin: 0 auto 12px;
+}
+.modal-name { text-align: center; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.modal-archetype {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 20px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-box {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.stat-box .val { font-size: 22px; font-weight: 900; }
+.stat-box .lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.modal-section { margin-bottom: 16px; }
+.modal-section h3 { font-size: 11px; letter-spacing: 1px; color: #555; text-transform: uppercase; margin-bottom: 8px; }
+.modal-quote {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 14px;
+  font-style: italic;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+}
+.modal-traits { display: flex; flex-direction: column; gap: 6px; }
+.trait { font-size: 13px; color: #aaa; padding-left: 4px; }
+
+.close-btn {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: #1a1a2e;
+  border: none;
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── LEGEND ── */
+.legend {
+  text-align: center;
+  padding: 32px 20px 48px;
+  font-size: 12px;
+  color: #444;
+}
+.legend span { color: #666; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">🔬 Data-Driven · April 2026</div>
+  <h1>Group Personality Report</h1>
+  <p>Bond Beyond Benches · IBPES 2005<br>Based on 24,000+ real messages</p>
+  <div class="stat-row">
+    <div class="stat"><div class="num">24K+</div><div class="lbl">Messages</div></div>
+    <div class="stat"><div class="num">15</div><div class="lbl">Personalities</div></div>
+    <div class="stat"><div class="num">28</div><div class="lbl">Days Active</div></div>
+  </div>
+</div>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="filterCards('all',this)">All 15</button>
+  <button class="filter-btn" onclick="filterCards('chaos',this)">🔥 Chaos</button>
+  <button class="filter-btn" onclick="filterCards('silent',this)">🤫 Silent</button>
+  <button class="filter-btn" onclick="filterCards('latenight',this)">🌙 Night Owls</button>
+  <button class="filter-btn" onclick="filterCards('roaster',this)">😂 Roasters</button>
+  <button class="filter-btn" onclick="filterCards('detective',this)">🕵️ Detectives</button>
+</div>
+
+<div class="grid" id="cardGrid"></div>
+
+<div class="legend">Tap any card to see the full breakdown<br><span>Data pulled from actual WhatsApp messages · No vibes, only facts</span></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-avatar" id="mAvatar"></div>
+    <div class="modal-name" id="mName"></div>
+    <div class="modal-archetype" id="mArchetype"></div>
+    <div class="stat-grid" id="mStats"></div>
+    <div class="modal-section">
+      <h3>Signature Quote</h3>
+      <div class="modal-quote" id="mQuote"></div>
+    </div>
+    <div class="modal-section">
+      <h3>Personality Traits</h3>
+      <div class="modal-traits" id="mTraits"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PEOPLE = [
+  {
+    name: "Neha Patel",
+    initials: "NP",
+    msgs: 3614,
+    archetype: "👮 The Group Chairperson",
+    desc: "Never misses a message. Tags everyone. Edits her messages. Still awake at 2 AM asking why nobody replied.",
+    accent: "#f39c12",
+    avatarBg: "#2d1f08", avatarColor: "#f39c12",
+    tags: ["chaos","roaster","detective"],
+    pills: ["3,614 msgs", "883 late nights", "589 @tags", "318 questions"],
+    quote: '"Name to bata, kaam to bata." — mid-crush-game interrogation 🕵️',
+    stats: [{val:"3,614",lbl:"Messages"},{val:"883",lbl:"Late Nights"},{val:"589",lbl:"@Tags Sent"},{val:"318",lbl:"Questions Asked"}],
+    traits: ["🔴 First to ask, last to sleep", "🟡 Edits messages after sending (159 times)", "🟢 Tags the whole group daily", "🔵 The reason this chat stays alive"]
+  },
+  {
+    name: "Urvesh Patel",
+    initials: "UP",
+    msgs: 3194,
+    archetype: "🌙 The 1AM Night Owl",
+    desc: "Most messages AND most late-night messages. Bhai this, bhai that. What timezone are you even in?",
+    accent: "#9b59b6",
+    avatarBg: "#1a0a2d", avatarColor: "#9b59b6",
+    tags: ["latenight","chaos"],
+    pills: ["3,194 msgs", "1,260 late nights", "Top word: bhai", "Gujarati mode: always"],
+    quote: '"kale gareebo texas vs PA ladta hata 😂" — 1 AM energy',
+    stats: [{val:"3,194",lbl:"Messages"},{val:"1,260",lbl:"Late Night Msgs"},{val:"88",lbl:"Times said Bhai"},{val:"#1",lbl:"Night Owl Rank"}],
+    traits: ["🔴 Sent 1,260 messages after midnight", "🟡 Replies at 2 AM like it's nothing", "🟢 No time zone. Just vibes.", "🔵 bhai is basically punctuation for him"]
+  },
+  {
+    name: "Mihir VVN",
+    initials: "MV",
+    msgs: 1915,
+    archetype: "😂 The Human Laughtrack",
+    desc: "779 laughing messages. Organized the group. Also dodged the crush question for 2 hours straight. Contradictions are his brand.",
+    accent: "#27ae60",
+    avatarBg: "#0d2b1a", avatarColor: "#27ae60",
+    tags: ["chaos","roaster"],
+    pills: ["1,915 msgs", "779 laughs", "124 long msgs", "2hr crush dodger"],
+    quote: '"Together but not together...." — his answer to everything 🎭',
+    stats: [{val:"1,915",lbl:"Messages"},{val:"779",lbl:"Laugh Messages"},{val:"124",lbl:"Long Essays"},{val:"2hrs",lbl:"Crush Dodge Time"}],
+    traits: ["🔴 Laughs at everything (779 times)", "🟡 Writes the longest messages in the group", "🟢 Organized the group, started chaos", "🔵 Master of the non-answer answer"]
+  },
+  {
+    name: "Abhi",
+    initials: "AB",
+    msgs: 1852,
+    archetype: "🤔 Asks 315 Questions, Answers Zero",
+    desc: "Highly active, incredibly curious, somehow always more confused after a conversation than before. Also had 3 crushes.",
+    accent: "#e74c3c",
+    avatarBg: "#2b0d0d", avatarColor: "#e74c3c",
+    tags: ["detective","roaster"],
+    pills: ["1,852 msgs", "315 questions", "3 crushes (record)", "chhe: 365 times"],
+    quote: '"Jin jin ko Sewak sir ne fail kiya tha, wo saare patels US mein hai 😂"',
+    stats: [{val:"1,852",lbl:"Messages"},{val:"315",lbl:"Questions Asked"},{val:"3",lbl:"School Crushes"},{val:"365",lbl:"Times said chhe"}],
+    traits: ["🔴 Asks the most questions per message", "🟡 Probably still waiting for answers", "🟢 Holds the 3-crush world record", "🔵 Every message ends with a plot twist"]
+  },
+  {
+    name: "Jeno Jose",
+    initials: "JJ",
+    msgs: 1719,
+    archetype: "☀️ Day Shift. No Exceptions.",
+    desc: "1,719 messages — but only 10 after midnight. While others were awake at 2 AM debating crushes, Jeno was in deep sleep. Respect.",
+    accent: "#3498db",
+    avatarBg: "#0d1e2b", avatarColor: "#3498db",
+    tags: ["silent","detective"],
+    pills: ["1,719 msgs", "10 late nights", "310 questions", "Early bird"],
+    quote: '"sabka number ayega... 😈" — the most threatening thing said in this chat',
+    stats: [{val:"1,719",lbl:"Messages"},{val:"10",lbl:"Late Night Msgs"},{val:"310",lbl:"Questions Asked"},{val:"9PM",lbl:"Estimated Bedtime"}],
+    traits: ["🔴 1,719 messages, only 10 past midnight", "🟡 Replies fast — during business hours only", "🟢 Most disciplined sleep schedule in group", "🔵 Occasional menace when awake"]
+  },
+  {
+    name: "Lokhandwala Husein",
+    initials: "LH",
+    msgs: 1460,
+    archetype: "✂️ The One-Liner Assassin",
+    desc: "Average message: 22 characters. Says more with less than anyone. A man of few words and maximum impact.",
+    accent: "#e67e22",
+    avatarBg: "#2d1a08", avatarColor: "#e67e22",
+    tags: ["silent","roaster"],
+    pills: ["1,460 msgs", "22 avg chars", "Zero long msgs", "Pure efficiency"],
+    quote: '"pehla thi neha ne rasto samjaay deje ok 😂" — 32 chars, maximum damage',
+    stats: [{val:"1,460",lbl:"Messages"},{val:"22",lbl:"Avg Msg Length"},{val:"0",lbl:"Long Messages"},{val:"100%",lbl:"Efficiency Rating"}],
+    traits: ["🔴 Shortest average message in the group", "🟡 Never wasted a single word", "🟢 Hits different every single time", "🔵 The group's unofficial editor"]
+  },
+  {
+    name: "Nirali",
+    initials: "NI",
+    msgs: 1324,
+    archetype: "🕵️ Chief of Intelligence",
+    desc: "Wants the full story. No missing information allowed. Helped 2 couples get together. Knows everything. Says nothing accidentally.",
+    accent: "#1abc9c",
+    avatarBg: "#0d2b26", avatarColor: "#1abc9c",
+    tags: ["detective","chaos"],
+    pills: ["1,324 msgs", "264 laughs", "Secret Cupid", "Zero gaps allowed"],
+    quote: '"Hume puri kahani chahiye, bina kisi missing info ke 😤"',
+    stats: [{val:"1,324",lbl:"Messages"},{val:"264",lbl:"Laugh Messages"},{val:"2",lbl:"Couples Helped"},{val:"0",lbl:"Info Gaps Tolerated"}],
+    traits: ["🔴 Demands complete information always", "🟡 Secret cupid behind the scenes", "🟢 Can smell an incomplete story from miles", "🔵 The group would not function without her"]
+  },
+  {
+    name: "Darshita",
+    initials: "DA",
+    msgs: 1353,
+    archetype: "📝 The Secret Keeper (Who Edits After Sending)",
+    desc: "Had a secret crush (Ashraf). Edits messages frequently. Short replies. Has receipts on everyone — especially old nicknames.",
+    accent: "#fd79a8",
+    avatarBg: "#2b0d1a", avatarColor: "#fd79a8",
+    tags: ["silent","detective"],
+    pills: ["1,353 msgs", "46 message edits", "Ashraf 🤫", "Short & precise"],
+    quote: '"Pranali called u Gangu teli 😂 @Urvesh Patel" — filed from memory',
+    stats: [{val:"1,353",lbl:"Messages"},{val:"46",lbl:"Edited Messages"},{val:"1",lbl:"Crush (Ashraf 🤫)"},{val:"23",lbl:"Avg Msg Length"}],
+    traits: ["🔴 Keeps secrets well — until she doesn't", "🟡 Edits messages after the moment passes", "🟢 Has archived everyone's embarrassing history", "🔵 Chintan guessed her crush. She confirmed it."]
+  },
+  {
+    name: "Harshil",
+    initials: "HA",
+    msgs: 1255,
+    archetype: "🔪 Full-Time Roaster, Part-Time Friend",
+    desc: "187 questions, 180 laughs, and a perfectly timed burn for every situation. If you're getting roasted, it's probably Harshil.",
+    accent: "#fdcb6e",
+    avatarBg: "#2b220d", avatarColor: "#fdcb6e",
+    tags: ["roaster","detective"],
+    pills: ["1,255 msgs", "180 laughs", "187 questions", "Roast accuracy: high"],
+    quote: '"Tu doc. bani hot to bichara animals nu su thai gyu hot 🥲" — to Prina',
+    stats: [{val:"1,255",lbl:"Messages"},{val:"180",lbl:"Laugh Messages"},{val:"187",lbl:"Questions Asked"},{val:"🔪",lbl:"Roast Tool"}],
+    traits: ["🔴 Balances roasting and asking equally", "🟡 The compliment always has a sting in it", "🟢 205 late night messages — peak roast hours", "🔵 Harshil mentioned = someone's getting cooked"]
+  },
+  {
+    name: "Chintan Patel VVN",
+    initials: "CP",
+    msgs: 958,
+    archetype: "🌀 Chaos Architect",
+    desc: "Started the crush game. Started multiple arguments. 333 late night messages. 'yaad' is literally his most used word — he lives in nostalgia.",
+    accent: "#a29bfe",
+    avatarBg: "#1a1a2e", avatarColor: "#a29bfe",
+    tags: ["chaos","latenight"],
+    pills: ["958 msgs", "333 late nights", "Started crush game", "Top word: yaad"],
+    quote: '"Jo koi free ho to timepass karo 😜" — how every chaos begins',
+    stats: [{val:"958",lbl:"Messages"},{val:"333",lbl:"Late Night Msgs"},{val:"#1",lbl:"Crush Game Founder"},{val:"yaad",lbl:"Most Used Word"}],
+    traits: ["🔴 Every group incident traces back to him", "🟡 Nostalgia is his operating system", "🟢 Late night philosopher and chaos merchant", "🔵 'Jo koi free ho' = run"]
+  },
+  {
+    name: "Madhuri",
+    initials: "MA",
+    msgs: 815,
+    archetype: "🧠 The Group Analyst",
+    desc: "Writes the longest, most thoughtful messages. Watches the group from a distance and then drops an observation that's 100% correct.",
+    accent: "#55efc4",
+    avatarBg: "#0d2b24", avatarColor: "#55efc4",
+    tags: ["detective","silent"],
+    pills: ["815 msgs", "158 laughs", "41 avg chars", "45 long essays"],
+    quote: '"e topic na lidhe pacha 2000+ msgs thaya group ma 😂" — correct',
+    stats: [{val:"815",lbl:"Messages"},{val:"41",lbl:"Avg Msg Length"},{val:"45",lbl:"Long Messages"},{val:"100%",lbl:"Observation Accuracy"}],
+    traits: ["🔴 Writes the most complete thoughts", "🟡 Spots group trends nobody else notices", "🟢 Always correct. Mildly terrifying.", "🔵 The group's unofficial anthropologist"]
+  },
+  {
+    name: "Tejasvi",
+    initials: "TE",
+    msgs: 768,
+    archetype: "🗡️ The Calm Assassin",
+    desc: "Short messages. Surgical precision. Zero laughs in the data but maximum impact. Edits frequently — because she means exactly what she says.",
+    accent: "#ff7675",
+    avatarBg: "#2b0d0d", avatarColor: "#ff7675",
+    tags: ["roaster","silent"],
+    pills: ["768 msgs", "Only 14 laughs", "21 edits", "One crush: Nikhil Nair"],
+    quote: '"Yeh kabse politician ban gaye? 😂" — no buildup, just impact',
+    stats: [{val:"768",lbl:"Messages"},{val:"14",lbl:"Laughs (rare = precious)"},{val:"21",lbl:"Edited Messages"},{val:"1",lbl:"Crush (Nikhil Nair)"}],
+    traits: ["🔴 Fewest laughs in the group — each one earned", "🟡 Edits for precision, not regret", "🟢 One-line verdict, no appeal", "🔵 Soft corner for Nikhil Nair (confirmed)"]
+  },
+  {
+    name: "Amarjeet Singh",
+    initials: "AS",
+    msgs: 86,
+    archetype: "🏆 Rare but Legendary",
+    desc: "86 messages. Every single one was quotable. Won the crush game by confessing to a teacher. The group's most valuable player per message.",
+    accent: "#ffeaa7",
+    avatarBg: "#2b270d", avatarColor: "#ffeaa7",
+    tags: ["chaos","roaster"],
+    pills: ["86 msgs total", "0 wasted words", "Crush: Rekha Madam 🏆", "ROI: immeasurable"],
+    quote: '"Jis biscuit se dooba hua biscuit nikal rahe ho, woh bhi doob jaana 😂"',
+    stats: [{val:"86",lbl:"Total Messages"},{val:"∞",lbl:"Impact per Message"},{val:"#1",lbl:"Crush Game Winner"},{val:"📚",lbl:"Crush: Rekha Madam"}],
+    traits: ["🔴 Lowest message count, highest legend status", "🟡 Disappears for hours then drops philosophy", "🟢 Won the crush game by confessing to a teacher", "🔵 Biscuit quote lives rent-free in everyone's head"]
+  },
+  {
+    name: "Nisha bholu Patel",
+    initials: "NB",
+    msgs: 1167,
+    archetype: "🤣 The Infinite Laugh Reactor",
+    desc: "Top emoji: 🤣🤣🤣🤣 (yes, four at once). 282 laughing messages. Responds to everything with pure unbridled joy. The group's sunshine.",
+    accent: "#fdcb6e",
+    avatarBg: "#2b220d", avatarColor: "#fdcb6e",
+    tags: ["roaster","chaos"],
+    pills: ["1,167 msgs", "282 laughs", "Top emoji: 🤣🤣🤣🤣", "Eternal positive vibes"],
+    quote: '"🤣🤣🤣🤣" — her most deployed tool and it always works',
+    stats: [{val:"1,167",lbl:"Messages"},{val:"282",lbl:"Laugh Messages"},{val:"4x🤣",lbl:"Minimum Emoji Order"},{val:"100%",lbl:"Positivity Rate"}],
+    traits: ["🔴 Laughs with 4 emojis minimum at all times", "🟡 Impossible to bring the energy down", "🟢 233 late night messages, still smiling", "🔵 The group's automatic mood lifter"]
+  },
+  {
+    name: "Dr. Prina Bhavsar",
+    initials: "PB",
+    msgs: 621,
+    archetype: "🩺 The Politely Devastating Doctor",
+    desc: "Top words: hello, okay, good. Sounds harmless. But Harshil once said she'd ruin animals as a doctor — and she just said okay. 💀",
+    accent: "#74b9ff",
+    avatarBg: "#0d1e2b", avatarColor: "#74b9ff",
+    tags: ["silent","detective"],
+    pills: ["621 msgs", "Top word: hello", "216 late nights", "MD in calm energy"],
+    quote: '"okay" — her response to being roasted by Harshil',
+    stats: [{val:"621",lbl:"Messages"},{val:"24",lbl:"Times said okay"},{val:"216",lbl:"Late Night Msgs"},{val:"🩺",lbl:"Profession + Personality"}],
+    traits: ["🔴 Replies with exactly the energy needed: calm", "🟡 Most polished presence in the chat", "🟢 Still active at 2 AM (doctor hours)", "🔵 The roasts bounce off her. She's built different."]
+  },
+];
+
+function renderCards(filter='all') {
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = '';
+  PEOPLE.filter(p => filter==='all' || p.tags.includes(filter)).forEach((p,i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.setProperty('--accent', p.accent);
+    el.innerHTML = `
+      <div class="card-top">
+        <div class="avatar" style="background:${p.avatarBg};color:${p.avatarColor}">${p.initials}</div>
+        <div>
+          <div class="card-name">${p.name.split(' ')[0]}</div>
+          <div class="card-msgs">${p.msgs.toLocaleString()} msgs</div>
+        </div>
+      </div>
+      <div class="archetype">${p.archetype}</div>
+      <div class="card-desc">${p.desc}</div>
+      <div class="pills">${p.pills.map(t=>`<span class="pill">${t}</span>`).join('')}</div>
+      <div class="quote-bubble">${p.quote}</div>
+    `;
+    el.onclick = () => openModal(p);
+    grid.appendChild(el);
+  });
+}
+
+function openModal(p) {
+  const m = document.getElementById('modal');
+  document.getElementById('mAvatar').style.cssText = `background:${p.avatarBg};color:${p.avatarColor};width:72px;height:72px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;margin:0 auto 12px;`;
+  document.getElementById('mAvatar').textContent = p.initials;
+  document.getElementById('mName').textContent = p.name;
+  document.getElementById('mArchetype').style.color = p.accent;
+  document.getElementById('mArchetype').textContent = p.archetype;
+  document.getElementById('mStats').innerHTML = p.stats.map(s=>`
+    <div class="stat-box">
+      <div class="val" style="color:${p.accent}">${s.val}</div>
+      <div class="lbl">${s.lbl}</div>
+    </div>`).join('');
+  document.getElementById('mQuote').textContent = p.quote;
+  document.getElementById('mTraits').innerHTML = p.traits.map(t=>`<div class="trait">${t}</div>`).join('');
+  document.getElementById('modalOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if(e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+}
+
+function filterCards(filter, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards(filter);
+}
+
+renderCards();
+</script>
+</body>
+</html>
