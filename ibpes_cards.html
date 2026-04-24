@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IBPES 2005 · Stat Cards</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root { --accent: #fff; }
+
+body {
+  background: #080810;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 40px 20px 24px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(130,60,255,0.12) 0%, transparent 70%);
+}
+.header h1 {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+.header p { font-size: 13px; color: #555; margin-top: 5px; }
+
+/* ── PERSON SELECTOR ── */
+.selector {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid #111;
+}
+.selector::-webkit-scrollbar { display: none; }
+.sel-btn {
+  flex-shrink: 0;
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  border: 2px solid #1a1a2e;
+  background: #0e0e1a;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.sel-btn.active { border-width: 2px; transform: scale(1.1); }
+
+/* ── CARD STAGE ── */
+.stage {
+  padding: 20px 16px 40px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── THE CARD ── */
+.card {
+  width: 100%;
+  max-width: 380px;
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+  background: var(--card-bg);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes cardIn {
+  from { opacity:0; transform: scale(0.88) translateY(20px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+/* Noise texture overlay */
+.card::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.card-inner { position: relative; z-index: 2; }
+
+/* TOP BAND */
+.card-top {
+  padding: 28px 24px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.card-top::after {
+  content:'';
+  position:absolute;
+  top:-60px; right:-60px;
+  width:180px; height:180px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+}
+
+.card-season {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 16px;
+}
+
+.card-avatar-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.card-avatar {
+  width: 68px; height: 68px;
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 22px;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.card-name-block { flex: 1; }
+.card-name {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: #fff;
+}
+.card-archetype {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 5px;
+  line-height: 1.3;
+}
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 0 24px;
+}
+
+/* STATS GRID */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 0;
+}
+.stat-cell {
+  background: var(--card-bg);
+  padding: 16px 20px;
+}
+.stat-val {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.stat-lbl {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* QUOTE */
+.card-quote {
+  padding: 18px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.quote-text {
+  font-size: 13px;
+  font-style: italic;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.55;
+}
+.quote-text::before { content: '" '; color: rgba(255,255,255,0.2); font-size: 20px; }
+.quote-text::after  { content: ' "'; color: rgba(255,255,255,0.2); font-size: 20px; }
+
+/* FOOTER */
+.card-footer {
+  padding: 14px 24px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.card-footer-left {
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.5px;
+}
+.rank-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.5);
+}
+
+/* SHARE HINT */
+.share-hint {
+  text-align: center;
+  padding: 0 0 32px;
+  font-size: 12px;
+  color: #333;
+}
+
+/* TRAIT PILLS */
+.trait-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.trait-pill {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.5);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📇 IBPES 2005 · Stat Cards</h1>
+  <p>Tap a name · Screenshot your card</p>
+</div>
+
+<div class="selector" id="selector"></div>
+
+<div class="stage" id="stage"></div>
+<div class="share-hint">📸 Screenshot &amp; share in the group</div>
+
+<script>
+const PEOPLE = [
+  {
+    name: "Neha Patel",
+    init: "NP",
+    archetype: "👮 The Group Chairperson",
+    bg: "linear-gradient(160deg, #1a0800 0%, #3d1500 60%, #1a0800 100%)",
+    avatarBg: "#2d1a00", avatarColor: "#f97316",
+    accentColor: "#f97316",
+    stats: [
+      { val: "3,514", lbl: "Messages" },
+      { val: "883",   lbl: "Late Nights" },
+      { val: "589",   lbl: "@Tags Sent" },
+      { val: "#1",    lbl: "Top Talker" },
+    ],
+    quote: "Name to bata, kaam to bata. — mid-game interrogation",
+    traits: ["Never sleeps", "Tags everyone", "Edits messages", "Chat backbone"],
+    rank: "Most Active",
+  },
+  {
+    name: "Urvesh Patel",
+    init: "UP",
+    archetype: "🌙 The 1 AM Night Owl",
+    bg: "linear-gradient(160deg, #070020 0%, #150040 60%, #070020 100%)",
+    avatarBg: "#160030", avatarColor: "#a855f7",
+    accentColor: "#a855f7",
+    stats: [
+      { val: "3,194", lbl: "Messages" },
+      { val: "1,260", lbl: "Late Night Msgs" },
+      { val: "#1",    lbl: "Night Owl Rank" },
+      { val: "88×",   lbl: "Said Bhai" },
+    ],
+    quote: "kale gareebo texas vs PA ladta hata 😂 — 1 AM energy",
+    traits: ["Midnight regular", "Bhai enthusiast", "No timezone", "Pure stamina"],
+    rank: "Night Champion",
+  },
+  {
+    name: "Mihir VVN",
+    init: "MV",
+    archetype: "😂 The Human Laughtrack",
+    bg: "linear-gradient(160deg, #001508 0%, #003018 60%, #001508 100%)",
+    avatarBg: "#002010", avatarColor: "#22c55e",
+    accentColor: "#22c55e",
+    stats: [
+      { val: "1,915", lbl: "Messages" },
+      { val: "779",   lbl: "Laugh Messages" },
+      { val: "124",   lbl: "Long Essays" },
+      { val: "2hrs",  lbl: "Crush Dodge" },
+    ],
+    quote: "Together but not together.... — his answer to everything",
+    traits: ["Hype machine", "Essay writer", "Chaos organiser", "Crush dodger"],
+    rank: "Most Laughs",
+  },
+  {
+    name: "Abhi",
+    init: "AB",
+    archetype: "🤔 315 Questions, 0 Answers",
+    bg: "linear-gradient(160deg, #150000 0%, #300005 60%, #150000 100%)",
+    avatarBg: "#200008", avatarColor: "#f43f5e",
+    accentColor: "#f43f5e",
+    stats: [
+      { val: "1,852", lbl: "Messages" },
+      { val: "315",   lbl: "Questions Asked" },
+      { val: "3",     lbl: "School Crushes 🏆" },
+      { val: "365×",  lbl: "Said chhe" },
+    ],
+    quote: "Jin jin ko Sewak sir ne fail kiya tha, wo saare patels US mein hai lol",
+    traits: ["Perma-curious", "Crush record holder", "Plot twist king", "Abhi bhai"],
+    rank: "Most Questions",
+  },
+  {
+    name: "Jeno Jose",
+    init: "JJ",
+    archetype: "☀️ Day Shift. No Exceptions.",
+    bg: "linear-gradient(160deg, #000d1a 0%, #001a35 60%, #000d1a 100%)",
+    avatarBg: "#001020", avatarColor: "#38bdf8",
+    accentColor: "#38bdf8",
+    stats: [
+      { val: "1,719", lbl: "Messages" },
+      { val: "10",    lbl: "Late Night Msgs" },
+      { val: "9 PM",  lbl: "Est. Bedtime" },
+      { val: "310",   lbl: "Questions Asked" },
+    ],
+    quote: "sabka number ayega... 😈 — most threatening 3 words in the chat",
+    traits: ["Sleeps on time", "Low-key menace", "Day shift only", "Silent watcher"],
+    rank: "Most Disciplined",
+  },
+  {
+    name: "Lokhandwala Husein",
+    init: "LH",
+    archetype: "✂️ One-Liner Assassin",
+    bg: "linear-gradient(160deg, #150800 0%, #301800 60%, #150800 100%)",
+    avatarBg: "#201000", avatarColor: "#fb923c",
+    accentColor: "#fb923c",
+    stats: [
+      { val: "1,460", lbl: "Messages" },
+      { val: "22",    lbl: "Avg Chars / Msg" },
+      { val: "0",     lbl: "Long Messages" },
+      { val: "100%",  lbl: "Efficiency" },
+    ],
+    quote: "pehla thi neha ne rasto samjaay deje ok 😂 — 32 chars, max damage",
+    traits: ["Zero waste", "Pure precision", "Short & deadly", "Group editor"],
+    rank: "Most Efficient",
+  },
+  {
+    name: "Nirali",
+    init: "NI",
+    archetype: "🕵️ Chief of Intelligence",
+    bg: "linear-gradient(160deg, #001510 0%, #003025 60%, #001510 100%)",
+    avatarBg: "#002018", avatarColor: "#2dd4bf",
+    accentColor: "#2dd4bf",
+    stats: [
+      { val: "1,324", lbl: "Messages" },
+      { val: "988",   lbl: "Longest Msg (chars)" },
+      { val: "2",     lbl: "Couples Helped" },
+      { val: "264",   lbl: "Laugh Messages" },
+    ],
+    quote: "Hume puri kahani chahiye, bina kisi missing info ke 😤",
+    traits: ["Secret cupid", "Full story or nothing", "Essay mode", "Group glue"],
+    rank: "Longest Message",
+  },
+  {
+    name: "Darshita",
+    init: "DA",
+    archetype: "📝 Secret Keeper (Who Edits)",
+    bg: "linear-gradient(160deg, #180008 0%, #320015 60%, #180008 100%)",
+    avatarBg: "#220010", avatarColor: "#f472b6",
+    accentColor: "#f472b6",
+    stats: [
+      { val: "1,353", lbl: "Messages" },
+      { val: "46",    lbl: "Edited Messages" },
+      { val: "1",     lbl: "Secret Crush 🤫" },
+      { val: "23",    lbl: "Avg Chars / Msg" },
+    ],
+    quote: "Pranali called u Gangu teli 😂 — filed from 20-year memory",
+    traits: ["Edits for perfection", "Has receipts", "Short but lethal", "Ashraf 🤫"],
+    rank: "Best Memory",
+  },
+  {
+    name: "Harshil",
+    init: "HA",
+    archetype: "🔪 Full-Time Roaster",
+    bg: "linear-gradient(160deg, #141000 0%, #2d2200 60%, #141000 100%)",
+    avatarBg: "#1e1800", avatarColor: "#facc15",
+    accentColor: "#facc15",
+    stats: [
+      { val: "1,255", lbl: "Messages" },
+      { val: "180",   lbl: "Laugh Messages" },
+      { val: "187",   lbl: "Questions Asked" },
+      { val: "205",   lbl: "Late Night Msgs" },
+    ],
+    quote: "Tu doc. bani hot to bichara animals nu su thai gyu hot 🥲",
+    traits: ["Surgical roaster", "No survivors", "Night active", "Question + burn combo"],
+    rank: "Most Dangerous",
+  },
+  {
+    name: "Chintan Patel VVN",
+    init: "CP",
+    archetype: "🌀 Chaos Architect",
+    bg: "linear-gradient(160deg, #080020 0%, #160040 60%, #080020 100%)",
+    avatarBg: "#100030", avatarColor: "#818cf8",
+    accentColor: "#818cf8",
+    stats: [
+      { val: "958",   lbl: "Messages" },
+      { val: "333",   lbl: "Late Night Msgs" },
+      { val: "#1",    lbl: "Crush Game Founder" },
+      { val: "yaad",  lbl: "Top Word" },
+    ],
+    quote: "Jo koi free ho to timepass karo 😜 — how every disaster begins",
+    traits: ["Chaos starter", "Nostalgia OS", "Late night thinker", "All roads lead to him"],
+    rank: "Chaos Index: MAX",
+  },
+  {
+    name: "Madhuri",
+    init: "MA",
+    archetype: "🧠 The Group Analyst",
+    bg: "linear-gradient(160deg, #001410 0%, #002a20 60%, #001410 100%)",
+    avatarBg: "#001e16", avatarColor: "#4ade80",
+    accentColor: "#4ade80",
+    stats: [
+      { val: "815",   lbl: "Messages" },
+      { val: "41",    lbl: "Avg Chars / Msg" },
+      { val: "45",    lbl: "Long Messages" },
+      { val: "100%",  lbl: "Observation Accuracy" },
+    ],
+    quote: "e topic na lidhe pacha 2000+ msgs thaya group ma 😂 — correct",
+    traits: ["Sees everything", "Thinks before typing", "Always right", "Group anthropologist"],
+    rank: "Most Insightful",
+  },
+  {
+    name: "Tejasvi",
+    init: "TE",
+    archetype: "🗡️ The Calm Assassin",
+    bg: "linear-gradient(160deg, #150002 0%, #300008 60%, #150002 100%)",
+    avatarBg: "#200005", avatarColor: "#fb7185",
+    accentColor: "#fb7185",
+    stats: [
+      { val: "768",   lbl: "Messages" },
+      { val: "14",    lbl: "Laughs (precious)" },
+      { val: "21",    lbl: "Edited Messages" },
+      { val: "1",     lbl: "Crush: Nikhil Nair" },
+    ],
+    quote: "Yeh kabse politician ban gaye? — no buildup, full damage",
+    traits: ["Zero warm-up", "Edits for precision", "Each laugh is rare", "Soft corner: Nikhil"],
+    rank: "Highest Hit Rate",
+  },
+  {
+    name: "Amarjeet Singh",
+    init: "AS",
+    archetype: "🏆 Rare but Legendary",
+    bg: "linear-gradient(160deg, #141000 0%, #2c2400 60%, #141000 100%)",
+    avatarBg: "#1e1a00", avatarColor: "#fbbf24",
+    accentColor: "#fbbf24",
+    stats: [
+      { val: "86",    lbl: "Total Messages" },
+      { val: "∞",     lbl: "Impact per Message" },
+      { val: "#1",    lbl: "Crush Game Winner" },
+      { val: "📚",    lbl: "Crush: Rekha Madam" },
+    ],
+    quote: "Jis biscuit se dooba hua biscuit nikal rahe ho, woh bhi doob jaana",
+    traits: ["Never wastes words", "Peak philosopher", "Arrived, won, left", "Legend status"],
+    rank: "Best ROI",
+  },
+  {
+    name: "Nisha Patel",
+    init: "NB",
+    archetype: "🤣 The Infinite Laugh Reactor",
+    bg: "linear-gradient(160deg, #001210 0%, #002820 60%, #001210 100%)",
+    avatarBg: "#001a14", avatarColor: "#34d399",
+    accentColor: "#34d399",
+    stats: [
+      { val: "1,167", lbl: "Messages" },
+      { val: "282",   lbl: "Laugh Messages" },
+      { val: "🤣×4",  lbl: "Signature Emoji" },
+      { val: "233",   lbl: "Late Night Msgs" },
+    ],
+    quote: "🤣🤣🤣🤣 — always four. Never three. Never five. Four.",
+    traits: ["Eternal sunshine", "Four laughs minimum", "Night smiler", "Impossible to upset"],
+    rank: "Highest Positivity",
+  },
+  {
+    name: "Dr. Prina Bhavsar",
+    init: "PB",
+    archetype: "🩺 Politely Devastating",
+    bg: "linear-gradient(160deg, #000d18 0%, #001830 60%, #000d18 100%)",
+    avatarBg: "#001020", avatarColor: "#60a5fa",
+    accentColor: "#60a5fa",
+    stats: [
+      { val: "621",   lbl: "Messages" },
+      { val: "24×",   lbl: "Said okay" },
+      { val: "216",   lbl: "Late Night Msgs" },
+      { val: "MD",    lbl: "Energy Level" },
+    ],
+    quote: "okay — her entire response to being roasted by Harshil",
+    traits: ["Roast-proof", "Maximum calm", "Still up at 2 AM", "Built different"],
+    rank: "Most Unshakeable",
+  },
+];
+
+let active = 0;
+
+function render(i) {
+  active = i;
+  const p = PEOPLE[i];
+
+  // Update selector
+  document.querySelectorAll('.sel-btn').forEach((b, j) => {
+    b.classList.toggle('active', j === i);
+    b.style.borderColor = j === i ? p.accentColor : '#1a1a2e';
+    b.style.color = j === i ? p.accentColor : '#444';
+    b.style.background = j === i ? p.avatarBg : '#0e0e1a';
+  });
+
+  // Scroll selector
+  const btn = document.querySelector('.sel-btn.active');
+  if(btn) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+  const stage = document.getElementById('stage');
+  stage.innerHTML = `
+    <div class="card" style="background:${p.bg}">
+      <div class="card-inner">
+
+        <div class="card-top">
+          <div class="card-season">IBPES 2005 · BOND BEYOND BENCHES · APR 2026</div>
+          <div class="card-avatar-row">
+            <div class="card-avatar" style="background:${p.avatarBg};color:${p.accentColor}">${p.init}</div>
+            <div class="card-name-block">
+              <div class="card-name">${p.name}</div>
+              <div class="card-archetype" style="color:${p.accentColor}">${p.archetype}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          ${p.stats.map(s => `
+            <div class="stat-cell">
+              <div class="stat-val" style="color:${p.accentColor}">${s.val}</div>
+              <div class="stat-lbl">${s.lbl}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="trait-row">
+          ${p.traits.map(t => `<span class="trait-pill">${t}</span>`).join('')}
+        </div>
+
+        <div class="card-quote">
+          <div class="quote-text">${p.quote}</div>
+        </div>
+
+        <div class="card-footer">
+          <div class="card-footer-left">IBPES 2005 · Class of 2005</div>
+          <div class="rank-badge" style="border-color:${p.accentColor}33;color:${p.accentColor}">${p.rank}</div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+// Build selector
+const sel = document.getElementById('selector');
+PEOPLE.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'sel-btn';
+  btn.textContent = p.init;
+  btn.onclick = () => render(i);
+  btn.style.color = '#444';
+  sel.appendChild(btn);
+});
+
+// Swipe support on card
+let tx = 0;
+document.getElementById('stage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.getElementById('stage').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if(Math.abs(dx) > 60) {
+    if(dx < 0 && active < PEOPLE.length-1) render(active+1);
+    if(dx > 0 && active > 0) render(active-1);
+  }
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if(e.key==='ArrowRight' && active<PEOPLE.length-1) render(active+1);
+  if(e.key==='ArrowLeft'  && active>0) render(active-1);
+});
+
+render(0);
+</script>
+</body>
+</html>
